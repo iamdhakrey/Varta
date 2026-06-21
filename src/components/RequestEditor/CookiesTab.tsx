@@ -11,7 +11,10 @@ export default function CookiesTab({ rows, onChange }: Props) {
     onChange(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
   function addRow() {
-    onChange([...rows, { id: crypto.randomUUID(), name: "", value: "", domain: "" }]);
+    onChange([
+      ...rows,
+      { id: crypto.randomUUID(), name: "", value: "", domain: "" },
+    ]);
   }
   function removeRow(id: string) {
     onChange(rows.filter((r) => r.id !== id));
@@ -27,7 +30,10 @@ export default function CookiesTab({ rows, onChange }: Props) {
       </div>
 
       {rows.map((row) => (
-        <div key={row.id} className="grid grid-cols-[1fr_1fr_1fr_28px] items-center gap-2 border-b border-borderMuted py-1.5">
+        <div
+          key={row.id}
+          className="grid grid-cols-[1fr_1fr_1fr_28px] items-center gap-2 border-b border-borderMuted py-1.5"
+        >
           <input
             value={row.name}
             onChange={(e) => update(row.id, { name: e.target.value })}
@@ -43,17 +49,26 @@ export default function CookiesTab({ rows, onChange }: Props) {
             onChange={(e) => update(row.id, { domain: e.target.value })}
             className="bg-transparent font-mono text-sm text-text-primary outline-none"
           />
-          <button onClick={() => removeRow(row.id)} aria-label="Remove cookie" className="text-text-muted hover:text-error">
+          <button
+            onClick={() => removeRow(row.id)}
+            aria-label="Remove cookie"
+            className="text-text-muted hover:text-error"
+          >
             <Trash2 size={13} />
           </button>
         </div>
       ))}
 
       {rows.length === 0 && (
-        <p className="py-4 text-sm text-text-muted">No cookies for this request yet.</p>
+        <p className="py-4 text-sm text-text-muted">
+          No cookies for this request yet.
+        </p>
       )}
 
-      <button onClick={addRow} className="mt-2 flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary">
+      <button
+        onClick={addRow}
+        className="mt-2 flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
+      >
         <Plus size={13} />
         Add cookie
       </button>

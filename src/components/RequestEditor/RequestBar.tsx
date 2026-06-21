@@ -21,8 +21,10 @@ export default function RequestBar({ tab }: { tab: RequestTab }) {
       <div className="relative">
         <select
           value={tab.request.method}
-          onChange={(e) => updateActiveRequest({ method: e.target.value as HttpMethod })}
-          className={`input-shell appearance-none pr-7 font-semibold ${methodStyles[tab.request.method]}`}
+          onChange={(e) =>
+            updateActiveRequest({ method: e.target.value as HttpMethod })
+          }
+          className={`input-shell appearance-none pr-7 font-semibold ${methodStyles[tab.request.method as HttpMethod]}`}
         >
           {methods.map((m) => (
             <option key={m} value={m} className="bg-panel text-text-primary">
@@ -30,7 +32,10 @@ export default function RequestBar({ tab }: { tab: RequestTab }) {
             </option>
           ))}
         </select>
-        <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary" />
+        <ChevronDown
+          size={13}
+          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
+        />
       </div>
 
       <input

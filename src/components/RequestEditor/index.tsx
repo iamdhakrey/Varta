@@ -71,7 +71,16 @@ function RequestPanel({ tab }: { tab: RequestTab }) {
         )}
         {subTab === "body" && (
           <BodyTab
-            body={tab.request.body}
+            body={{
+              ...tab.request.body,
+              mode: tab.request.body?.mode || "raw",
+              // Safely map the files if they exist to include id and sizeBytes
+              files: tab.request.body?.files?.map((file) => ({
+                ...file,
+                id: file.id || crypto.randomUUID(), // Fallback ID if missing
+                sizeBytes: file.sizeBytes || 0, // Fallback size if missing
+              })),
+            }}
             onChange={(body) => updateActiveRequest({ body })}
           />
         )}

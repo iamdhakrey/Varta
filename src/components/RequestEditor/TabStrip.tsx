@@ -33,7 +33,9 @@ export default function TabStrip() {
                   : "text-text-secondary border-t-2 border-t-transparent hover:bg-panel-raised"
               }`}
             >
-              <span className={`text-[10px] font-semibold ${methodColor[tab.request.method]}`}>
+              <span
+                className={`text-[10px] font-semibold ${methodColor[tab.request.method as HttpMethod]}`}
+              >
                 {tab.request.method}
               </span>
               <span className="truncate">
@@ -61,10 +63,16 @@ export default function TabStrip() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 pl-2">
-        <button className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary" aria-label="Save">
+        <button
+          className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary"
+          aria-label="Save"
+        >
           <Save size={15} />
         </button>
-        <button className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary" aria-label="Duplicate">
+        <button
+          className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary"
+          aria-label="Duplicate"
+        >
           <Copy size={15} />
         </button>
         <button
@@ -74,7 +82,10 @@ export default function TabStrip() {
         >
           <History size={15} />
         </button>
-        <button className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary" aria-label="Settings">
+        <button
+          className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary"
+          aria-label="Settings"
+        >
           <Settings size={15} />
         </button>
       </div>

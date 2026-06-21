@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ApiRequest, ApiResponse, RequestTab } from "./types";
+import { ApiRequest, RequestTab } from "./types";
 
 import { sendNativeRequest } from "./services/rest";
 // import { collections } from "./data/mock";
@@ -35,7 +35,7 @@ function blankRequest(): ApiRequest {
     headers: [{ id: "h1", key: "", value: "", enabled: true }],
     cookies: [],
     auth: { type: "none" },
-    body: { mode: "json", raw: "" },
+    body: { raw: "" },
   };
 }
 

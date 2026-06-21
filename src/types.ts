@@ -46,6 +46,7 @@ export interface ApiRequestBody {
   files?: ApiFile[];
   raw?: string;
   json?: any;
+  mode?: BodyMode;
   // Extend this if you have text fields or JSON payloads
 }
 
@@ -56,7 +57,8 @@ export interface KeyValueRow {
 }
 
 export interface CookieRow {
-  key: string;
+  id: string;
+  name: string;
   value: string;
   domain?: string;
   path?: string;

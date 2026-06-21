@@ -52,7 +52,7 @@ function FolderNode({ folder }: { folder: CollectionFolder }) {
               }`}
             >
               <span
-                className={`w-9 shrink-0 text-[10px] font-semibold ${methodColor[req.method]}`}
+                className={`w-9 shrink-0 text-[10px] font-semibold ${methodColor[req.method as HttpMethod]}`}
               >
                 {req.method}
               </span>
