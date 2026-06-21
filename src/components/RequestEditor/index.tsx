@@ -1,0 +1,94 @@
+import { useState } from "react";
+import { RequestTab } from "../../types";
+import { useVartaStore } from "../../store";
+import TabStrip from "./TabStrip";
+import RequestBar from "./RequestBar";
+import KeyValueTable from "./KeyValueTable";
+import CookiesTab from "./CookiesTab";
+import AuthTab from "./AuthTab";
+import BodyTab from "./BodyTab";
+import EmptyState from "../EmptyState";
+
+type SubTab = "params" | "headers" | "cookies" | "auth" | "body";
+
+const SUB_TABS: { id: SubTab; label: string }[] = [
+  { id: "params", label: "Params" },
+  { id: "headers", label: "Headers" },
+  { id: "cookies", label: "Cookies" },
+  { id: "auth", label: "Authorization" },
+  { id: "body", label: "Body" },
+];
+
+function RequestPanel({ tab }: { tab: RequestTab }) {
+  const [subTab, setSubTab] = useState<SubTab>("params");
+  const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
+
+  return (
+    <div className="flex h-full flex-col">
+      <RequestBar tab={tab} />
+
+      <div className="flex gap-1 border-b border-border px-4">
+        {SUB_TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSubTab(t.id)}
+            className={`tab-trigger ${subTab === t.id ? "tab-trigger-active" : ""}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {subTab === "params" && (
+          <KeyValueTable
+            rows={tab.request.params}
+            onChange={(rows) => updateActiveRequest({ params: rows })}
+            keyPlaceholder="Key"
+            valuePlaceholder="Value"
+          />
+        )}
+        {subTab === "headers" && (
+          <KeyValueTable
+            rows={tab.request.headers}
+            onChange={(rows) => updateActiveRequest({ headers: rows })}
+            keyPlaceholder="Key"
+            valuePlaceholder="Value"
+            suggestKeys
+          />
+        )}
+        {subTab === "cookies" && (
+          <CookiesTab
+            rows={tab.request.cookies}
+            onChange={(rows) => updateActiveRequest({ cookies: rows })}
+          />
+        )}
+        {subTab === "auth" && (
+          <AuthTab
+            auth={tab.request.auth}
+            onChange={(auth) => updateActiveRequest({ auth })}
+          />
+        )}
+        {subTab === "body" && (
+          <BodyTab
+            body={tab.request.body}
+            onChange={(body) => updateActiveRequest({ body })}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function RequestEditor() {
+  const tabs = useVartaStore((s) => s.tabs);
+  const activeTabId = useVartaStore((s) => s.activeTabId);
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+
+  return (
+    <div className="flex h-full flex-1 flex-col bg-bg">
+      <TabStrip />
+      {activeTab ? <RequestPanel tab={activeTab} /> : <EmptyState />}
+    </div>
+  );
+}

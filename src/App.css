@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------
+ * Design tokens — Tailwind v4 is CSS-first: these @theme variables are
+ * what tailwind.config.ts's `theme.extend` used to do. Each variable
+ * generates the matching utilities automatically, e.g.
+ *   --color-method-get  ->  text-method-get, bg-method-get, border-method-get
+ *   --radius-lg          ->  rounded-lg
+ *   --shadow-elevated     ->  shadow-elevated
+ * ------------------------------------------------------------------- */
+@theme {
+    /* Surfaces */
+    --color-bg: #0d1117;
+    --color-panel: #161b22;
+    --color-panel-raised: #1c2129;
+    --color-border: #30363d;
+    --color-borderMuted: #21262d;
+
+    /* Text */
+    --color-text-primary: #e6edf3;
+    --color-text-secondary: #8b949e;
+    --color-text-muted: #6e7681;
+
+    /* Brand — purple to blue */
+    --color-primary: #8b5cf6;
+    --color-primary-hover: #9d74f8;
+    --color-secondary: #3b82f6;
+
+    /* Semantic */
+    --color-success: #10b981;
+    --color-error: #ef4444;
+    --color-warning: #f59e0b;
+
+    /* HTTP method colors */
+    --color-method-get: #10b981;
+    --color-method-post: #3b82f6;
+    --color-method-put: #f59e0b;
+    --color-method-patch: #8b5cf6;
+    --color-method-delete: #ef4444;
+
+    /* Radius — overrides the default md/lg scale to the spec's 8px/10px */
+    --radius-md: 8px;
+    --radius-lg: 10px;
+
+    /* Type */
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    --text-xs: 11px;
+    --text-xs--line-height: 1.4;
+    --text-sm: 12.5px;
+    --text-sm--line-height: 1.5;
+    --text-base: 13.5px;
+    --text-base--line-height: 1.5;
+
+    /* Elevation */
+    --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* Custom utility (v4's replacement for tailwind.config.ts's
+ * `backgroundImage` extend) — usable directly as `bg-brand-gradient`. */
+@utility bg-brand-gradient {
+    background-image: linear-gradient(
+        90deg,
+        var(--color-primary) 0%,
+        var(--color-secondary) 100%
+    );
+}
+
+@layer base {
+    * {
+        border-color: var(--color-border);
+    }
+    body {
+        font-feature-settings: "tnum";
+    }
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+}
+
+@layer components {
+    .kbd {
+        @apply rounded-md border border-border bg-panel px-1.5 py-0.5 text-[10px] text-text-secondary font-mono;
+    }
+    .tab-trigger {
+        @apply px-3 py-2 text-sm text-text-secondary border-b-2 border-transparent cursor-pointer hover:text-text-primary transition-colors;
+    }
+    .tab-trigger-active {
+        @apply text-text-primary border-primary;
+    }
+    .input-shell {
+        @apply bg-panel border border-border rounded-md text-sm text-text-primary placeholder:text-text-muted px-3 py-1.5 outline-none focus:border-primary focus:ring-1 focus:ring-primary/40 transition-colors;
+    }
+}
