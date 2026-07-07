@@ -34,12 +34,14 @@ export interface RequestBody {
   raw?: string;
   formData?: KeyValueRow[];
   urlEncoded?: KeyValueRow[];
-  files?: UploadedFile[];
+  files?: ApiFile[];
 }
 
 export interface ApiFile {
   name: string;
   path: string;
+  sizeBytes: number;
+  id: string; // Unique identifier for the file
 }
 
 export interface ApiRequestBody {

@@ -45,6 +45,7 @@ export default function BodyTab({ body, onChange }: Props) {
       id: crypto.randomUUID(),
       name: f.name,
       sizeBytes: f.size,
+      path:  "", // Tauri provides the path; in a browser, this will be empty
     }));
     onChange({ ...body, files: [...(body.files ?? []), ...next] });
   }
