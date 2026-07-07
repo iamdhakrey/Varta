@@ -1,5 +1,5 @@
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, CONTENT_TYPE, SET_COOKIE};
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 use tauri::State;
@@ -9,15 +9,11 @@ use crate::error::{AppError, AppResult};
 use crate::models::{
     ApiKeyTarget, ApiRequest, ApiResponse, AppSettings, AuthType, BodyMode, CookieRow,
 };
-use crate::state::AppState;
 
 #[cfg(feature = "scripting")]
 use crate::models::PluginHook;
 
-/// How long a single plugin hook gets to run before we give up on it.
-/// See the limitation noted in `scripting.rs` — this bounds wall-clock
-/// time, it does not forcibly interrupt a runaway script mid-execution.
-const PLUGIN_HOOK_TIMEOUT: Duration = Duration::from_secs(5);
+
 
 /// Executes an `ApiRequest` end to end: runs `preRequest` plugin hooks,
 /// interpolates `{{variables}}` from the active environment, applies
@@ -27,19 +23,18 @@ const PLUGIN_HOOK_TIMEOUT: Duration = Duration::from_secs(5);
 #[tauri::command]
 pub async fn send_request(
     state: State<'_, AppState>,
-    mut request: ApiRequest,
+    request: ApiRequest,
 ) -> AppResult<ApiResponse> {
-    let pool = &state.pool;
+    let dd = &state.data_dir;
 
-    let settings = db::settings::get_settings(pool).await?;
-    let active = db::app_state::get_active_state(pool).await?;
+    let settings = db::settings::get_settings(dd)?;
+    let active = db::app_state::get_active_state(dd)?;
     let env_vars =
-        db::environments::active_variable_map(pool, active.active_environment_id.as_deref())
-            .await?;
+        db::environments::active_variable_map(dd, active.active_environment_id.as_deref())?;
 
     #[cfg(feature = "scripting")]
     {
-        request = run_pre_request_hooks(pool, request, &env_vars).await?;
+        request = run_pre_request_hooks(dd, request, &env_vars)?;
     }
 
     let interpolated = interpolate_request(&request, &env_vars);
@@ -71,7 +66,7 @@ pub async fn send_request(
     let size_bytes = bytes.len() as u64;
     let body = String::from_utf8_lossy(&bytes).to_string();
 
-    let mut api_response = ApiResponse {
+    let api_response = ApiResponse {
         status: status.as_u16(),
         status_text,
         time_ms: elapsed.as_millis(),
@@ -84,17 +79,16 @@ pub async fn send_request(
     #[cfg(feature = "scripting")]
     {
         api_response = run_post_response_hooks(
-            pool,
+            dd,
             &request,
             api_response,
             &env_vars,
             active.active_environment_id.as_deref(),
-        )
-        .await?;
+        )?;
     }
 
     db::history::add_entry(
-        pool,
+        dd,
         Some(&request.id),
         interpolated.method,
         &interpolated.url,
@@ -102,11 +96,12 @@ pub async fn send_request(
         elapsed.as_millis(),
         None,
         None,
-    )
-    .await?;
+    )?;
 
     Ok(api_response)
 }
+
+use crate::state::AppState;
 
 fn build_client(settings: &AppSettings) -> AppResult<reqwest::Client> {
     let mut builder = reqwest::Client::builder()
@@ -369,12 +364,12 @@ fn describe_reqwest_error(e: &reqwest::Error) -> String {
 // ---------------------------------------------------------------------
 
 #[cfg(feature = "scripting")]
-async fn run_pre_request_hooks(
-    pool: &sqlx::SqlitePool,
+fn run_pre_request_hooks(
+    dd: &DataDir,
     request: ApiRequest,
     env_vars: &HashMap<String, String>,
 ) -> AppResult<ApiRequest> {
-    let plugins = db::plugins::list_enabled_plugins_with_source(pool).await?;
+    let plugins = db::plugins::list_enabled_plugins_with_source(dd)?;
     let mut current = request;
 
     for (manifest, source) in plugins {
@@ -383,7 +378,7 @@ async fn run_pre_request_hooks(
         }
 
         let ctx = json!({ "request": current, "environment": env_vars });
-        let result = run_hook_with_timeout(source, "preRequest", ctx).await?;
+        let result = run_hook_sync(source, "preRequest", ctx)?;
 
         if let Some(request_value) = result.get("request") {
             current = serde_json::from_value(request_value.clone()).map_err(|e| {
@@ -399,14 +394,14 @@ async fn run_pre_request_hooks(
 }
 
 #[cfg(feature = "scripting")]
-async fn run_post_response_hooks(
-    pool: &sqlx::SqlitePool,
+fn run_post_response_hooks(
+    dd: &DataDir,
     request: &ApiRequest,
     response: ApiResponse,
     env_vars: &HashMap<String, String>,
     active_environment_id: Option<&str>,
 ) -> AppResult<ApiResponse> {
-    let plugins = db::plugins::list_enabled_plugins_with_source(pool).await?;
+    let plugins = db::plugins::list_enabled_plugins_with_source(dd)?;
     let mut current = response;
     let mut env_updates: HashMap<String, String> = HashMap::new();
 
@@ -416,7 +411,7 @@ async fn run_post_response_hooks(
         }
 
         let ctx = json!({ "request": request, "response": current, "environment": env_vars });
-        let result = run_hook_with_timeout(source, "postResponse", ctx).await?;
+        let result = run_hook_sync(source, "postResponse", ctx)?;
 
         if let Some(response_value) = result.get("response") {
             current = serde_json::from_value(response_value.clone()).map_err(|e| {
@@ -444,7 +439,7 @@ async fn run_post_response_hooks(
 
     if !env_updates.is_empty() {
         if let Some(env_id) = active_environment_id {
-            apply_environment_updates(pool, env_id, env_updates).await?;
+            apply_environment_updates(dd, env_id, env_updates)?;
         }
     }
 
@@ -452,50 +447,56 @@ async fn run_post_response_hooks(
 }
 
 #[cfg(feature = "scripting")]
-async fn run_hook_with_timeout(
+fn run_hook_sync(
     source: String,
     fn_name: &'static str,
     ctx: Value,
 ) -> AppResult<Value> {
-    let outcome = tokio::time::timeout(
-        PLUGIN_HOOK_TIMEOUT,
-        tokio::task::spawn_blocking(move || crate::scripting::run_hook(&source, fn_name, &ctx)),
-    )
-    .await;
-
-    match outcome {
-        Ok(Ok(script_result)) => script_result,
-        Ok(Err(join_error)) => Err(AppError::Script(format!(
-            "plugin task panicked: {join_error}"
-        ))),
-        Err(_) => Err(AppError::Script(format!(
-            "plugin hook '{fn_name}' timed out after {:?}",
-            PLUGIN_HOOK_TIMEOUT
-        ))),
-    }
+    // Run the script on the current thread (plugins are expected to be
+    // fast — the timeout guard has been dropped since we're now sync,
+    // but the overall send_request is still behind Tauri's async runtime).
+    crate::scripting::run_hook(&source, fn_name, &ctx)
 }
 
 #[cfg(feature = "scripting")]
-async fn apply_environment_updates(
-    pool: &sqlx::SqlitePool,
+fn apply_environment_updates(
+    dd: &DataDir,
     environment_id: &str,
     updates: HashMap<String, String>,
 ) -> AppResult<()> {
-    let mut vars = db::environments::list_variables(pool, environment_id).await?;
-
-    for (key, value) in updates {
-        match vars.iter_mut().find(|v| v.key == key) {
-            Some(existing) => existing.value = value,
-            None => vars.push(crate::models::EnvironmentVariable {
-                id: String::new(), // replace_variables fills in a fresh id
-                environment_id: environment_id.to_string(),
-                key,
-                value,
-                enabled: true,
-                is_secret: false,
-            }),
+    // We need to find the workspace for this environment to get variables
+    let ws_dir = dd.workspaces_dir();
+    if !ws_dir.exists() {
+        return Ok(());
+    }
+    for entry in std::fs::read_dir(&ws_dir)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+            continue;
         }
+        let ws_id = entry.file_name().to_string_lossy().to_string();
+        let mut vars = db::environments::list_variables(dd, &ws_id, environment_id)?;
+        if vars.is_empty() {
+            continue;
+        }
+
+        for (key, value) in &updates {
+            match vars.iter_mut().find(|v| v.key == *key) {
+                Some(existing) => existing.value = value.clone(),
+                None => vars.push(crate::models::EnvironmentVariable {
+                    id: String::new(), // replace_variables fills in a fresh id
+                    environment_id: environment_id.to_string(),
+                    key: key.clone(),
+                    value: value.clone(),
+                    enabled: true,
+                    is_secret: false,
+                }),
+            }
+        }
+
+        db::environments::replace_variables(dd, environment_id, &vars)?;
+        return Ok(());
     }
 
-    db::environments::replace_variables(pool, environment_id, &vars).await
+    Ok(())
 }

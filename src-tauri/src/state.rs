@@ -1,5 +1,5 @@
-use sqlx::SqlitePool;
+use crate::db::DataDir;
 
 pub struct AppState {
-    pub pool: SqlitePool,
+    pub data_dir: DataDir,
 }

@@ -26,18 +26,17 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
-            tauri::async_runtime::block_on(async move {
-                let data_dir = app_handle
-                    .path()
-                    .app_data_dir()
-                    .expect("resolve app data dir");
-                std::fs::create_dir_all(&data_dir).expect("create app data dir");
-                let db_path = data_dir.join("varta.db");
+            let data_dir = app_handle
+                .path()
+                .app_data_dir()
+                .expect("resolve app data dir");
+            std::fs::create_dir_all(&data_dir).expect("create app data dir");
 
-                let pool = db::init_pool(&db_path).await.expect("initialize database");
+            let data_dir =
+                db::init_data_dir(&data_dir).expect("initialize data directory");
 
-                app_handle.manage(AppState { pool });
-            });
+            app_handle.manage(AppState { data_dir });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

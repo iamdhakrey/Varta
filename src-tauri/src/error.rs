@@ -7,12 +7,6 @@ use serde::{Serialize, Serializer};
 /// in a toast/inline error without leaking internal error shapes.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
-    #[error("database error: {0}")]
-    Db(#[from] sqlx::Error),
-
-    #[error("migration error: {0}")]
-    Migrate(#[from] sqlx::migrate::MigrateError),
-
     #[error("not found: {0}")]
     NotFound(String),
 
@@ -28,8 +22,11 @@ pub enum AppError {
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("serialization error: {0}")]
+    #[error("serialization error (json): {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("serialization error (yaml): {0}")]
+    Yaml(#[from] serde_yaml::Error),
 
     #[error("{0}")]
     Other(String),

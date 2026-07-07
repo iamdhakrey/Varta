@@ -1,86 +1,64 @@
-use sqlx::SqlitePool;
-
-use crate::db::now_iso;
+use crate::db::{read_yaml_vec, write_yaml, DataDir};
 use crate::error::{AppError, AppResult};
 use crate::models::{Theme, ThemeTokens};
 
-#[derive(sqlx::FromRow)]
-struct ThemeRow {
-    id: String,
-    name: String,
-    is_builtin: bool,
-    tokens_json: String,
+pub fn list_themes(dd: &DataDir) -> AppResult<Vec<Theme>> {
+    let mut themes: Vec<Theme> = read_yaml_vec(&dd.themes_path())?;
+    // Built-in themes first, then alphabetical
+    themes.sort_by(|a, b| {
+        b.is_builtin
+            .cmp(&a.is_builtin)
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    Ok(themes)
 }
 
-impl ThemeRow {
-    fn into_theme(self) -> AppResult<Theme> {
-        Ok(Theme {
-            id: self.id,
-            name: self.name,
-            is_builtin: self.is_builtin,
-            tokens: serde_json::from_str::<ThemeTokens>(&self.tokens_json)?,
-        })
-    }
+pub fn get_theme(dd: &DataDir, id: &str) -> AppResult<Theme> {
+    let themes = list_themes(dd)?;
+    themes
+        .into_iter()
+        .find(|t| t.id == id)
+        .ok_or_else(|| AppError::NotFound(format!("theme '{id}'")))
 }
 
-pub async fn list_themes(pool: &SqlitePool) -> AppResult<Vec<Theme>> {
-    let rows = sqlx::query_as::<_, ThemeRow>(
-        "SELECT id, name, is_builtin, tokens_json FROM themes ORDER BY is_builtin DESC, name ASC",
-    )
-    .fetch_all(pool)
-    .await?;
-
-    rows.into_iter().map(ThemeRow::into_theme).collect()
-}
-
-pub async fn get_theme(pool: &SqlitePool, id: &str) -> AppResult<Theme> {
-    let row = sqlx::query_as::<_, ThemeRow>(
-        "SELECT id, name, is_builtin, tokens_json FROM themes WHERE id = ?",
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?
-    .ok_or_else(|| AppError::NotFound(format!("theme '{id}'")))?;
-    row.into_theme()
-}
-
-pub async fn save_custom_theme(
-    pool: &SqlitePool,
+pub fn save_custom_theme(
+    dd: &DataDir,
     id: Option<&str>,
     name: &str,
     tokens: &ThemeTokens,
 ) -> AppResult<Theme> {
     let id = id.map(str::to_string).unwrap_or_else(crate::db::new_id);
-    let tokens_json = serde_json::to_string(tokens)?;
+    let mut themes: Vec<Theme> = read_yaml_vec(&dd.themes_path())?;
 
-    sqlx::query(
-        "INSERT INTO themes (id, name, is_builtin, tokens_json, created_at, updated_at) \
-         VALUES (?, ?, 0, ?, ?, ?) \
-         ON CONFLICT(id) DO UPDATE SET \
-            name = excluded.name, tokens_json = excluded.tokens_json, updated_at = excluded.updated_at \
-         WHERE themes.is_builtin = 0",
-    )
-    .bind(&id)
-    .bind(name)
-    .bind(&tokens_json)
-    .bind(now_iso())
-    .bind(now_iso())
-    .execute(pool)
-    .await?;
+    if let Some(existing) = themes.iter_mut().find(|t| t.id == id) {
+        if existing.is_builtin {
+            // Silently skip — can't modify built-ins, matching old SQLite
+            // WHERE clause behavior.
+            return Ok(existing.clone());
+        }
+        existing.name = name.to_string();
+        existing.tokens = tokens.clone();
+    } else {
+        themes.push(Theme {
+            id: id.clone(),
+            name: name.to_string(),
+            is_builtin: false,
+            tokens: tokens.clone(),
+        });
+    }
 
-    get_theme(pool, &id).await
+    write_yaml(&dd.themes_path(), &themes)?;
+    get_theme(dd, &id)
 }
 
-pub async fn delete_theme(pool: &SqlitePool, id: &str) -> AppResult<()> {
-    let theme = get_theme(pool, id).await?;
+pub fn delete_theme(dd: &DataDir, id: &str) -> AppResult<()> {
+    let theme = get_theme(dd, id)?;
     if theme.is_builtin {
         return Err(AppError::Invalid(
             "built-in themes can't be deleted".to_string(),
         ));
     }
-    sqlx::query("DELETE FROM themes WHERE id = ?")
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
+    let mut themes: Vec<Theme> = read_yaml_vec(&dd.themes_path())?;
+    themes.retain(|t| t.id != id);
+    write_yaml(&dd.themes_path(), &themes)
 }

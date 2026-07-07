@@ -1,11 +1,13 @@
-use sqlx::{AssertSqlSafe, QueryBuilder, SqlitePool};
+use serde::{Deserialize, Serialize};
 
-use crate::db::now_iso;
+use crate::db::{now_iso, read_yaml_vec, write_yaml, DataDir};
 use crate::error::{AppError, AppResult};
 use crate::models::{PluginManifest, PluginRecord};
 
-#[derive(sqlx::FromRow)]
-struct PluginRow {
+/// YAML-persisted plugin entry (replaces the old SQL row).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PluginEntry {
     id: String,
     name: String,
     version: String,
@@ -16,7 +18,7 @@ struct PluginRow {
     installed_at: String,
 }
 
-impl PluginRow {
+impl PluginEntry {
     fn into_record(self) -> AppResult<PluginRecord> {
         let manifest: PluginManifest = serde_json::from_str(&self.manifest_json)?;
         Ok(PluginRecord {
@@ -32,54 +34,25 @@ impl PluginRow {
     }
 }
 
-const PLUGIN_COLUMNS: &str =
-    "id, name, version, description, enabled, install_path, manifest_json, installed_at";
-
-pub async fn list_plugins(pool: &SqlitePool) -> AppResult<Vec<PluginRecord>> {
-    // let sql = format!("SELECT {PLUGIN_COLUMNS} FROM plugins ORDER BY name ASC");
-    // let safe_sql = AssertSqlSafe(&sql);
-    // let rows = sqlx::query_as::<_, PluginRow>(&safe_sql)
-    //     .fetch_all(pool)
-    //     .await?;
-    //
-    let mut query_builder: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new("SELECT ");
-    query_builder.push(PLUGIN_COLUMNS);
-    query_builder.push(" FROM plugins ORDER BY name ASC");
-
-    // .build_query_as maps the database columns to your PluginRow struct at runtime
-    let rows = query_builder
-        .build_query_as::<PluginRow>()
-        .fetch_all(pool)
-        .await?;
-
-    let records = rows
+pub fn list_plugins(dd: &DataDir) -> AppResult<Vec<PluginRecord>> {
+    let entries: Vec<PluginEntry> = read_yaml_vec(&dd.plugins_path())?;
+    let mut records: Vec<PluginRecord> = entries
         .into_iter()
-        .map(PluginRow::into_record)
+        .map(PluginEntry::into_record)
         .collect::<Result<Vec<_>, _>>()?;
+    records.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(records)
 }
 
-pub async fn list_enabled_plugins_with_source(
-    pool: &SqlitePool,
+pub fn list_enabled_plugins_with_source(
+    dd: &DataDir,
 ) -> AppResult<Vec<(PluginManifest, String)>> {
-    // let sql =
-    //     format!("SELECT {PLUGIN_COLUMNS} FROM plugins WHERE enabled = 1 ORDER BY installed_at ASC");
-    // let rows = sqlx::query_as::<_, PluginRow>(&sql).fetch_all(pool).await?;
+    let entries: Vec<PluginEntry> = read_yaml_vec(&dd.plugins_path())?;
 
-    let mut query_builder: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new("SELECT ");
-    query_builder.push(PLUGIN_COLUMNS);
-    query_builder.push(" FROM plugins WHERE enabled = 1 ORDER BY installed_at ASC");
-
-    // .build_query_as maps the database columns to your PluginRow struct at runtime
-    let rows = query_builder
-        .build_query_as::<PluginRow>()
-        .fetch_all(pool)
-        .await?;
-
-    let mut out = Vec::with_capacity(rows.len());
-    for row in rows {
-        let manifest: PluginManifest = serde_json::from_str(&row.manifest_json)?;
-        let entry_path = std::path::Path::new(&row.install_path).join(&manifest.entry);
+    let mut out = Vec::new();
+    for entry in entries.into_iter().filter(|e| e.enabled) {
+        let manifest: PluginManifest = serde_json::from_str(&entry.manifest_json)?;
+        let entry_path = std::path::Path::new(&entry.install_path).join(&manifest.entry);
         let source = std::fs::read_to_string(&entry_path).map_err(|e| {
             AppError::Other(format!(
                 "failed to read entry script for plugin '{}' at {}: {e}",
@@ -95,74 +68,62 @@ pub async fn list_enabled_plugins_with_source(
 /// Registers a plugin already unpacked on disk at `install_path`
 /// (containing `manifest.json`). Re-running with the same manifest id
 /// upserts — lets `install_plugin` double as "reinstall/update".
-pub async fn upsert_plugin(
-    pool: &SqlitePool,
+pub fn upsert_plugin(
+    dd: &DataDir,
     manifest: &PluginManifest,
     install_path: &str,
 ) -> AppResult<PluginRecord> {
     let manifest_json = serde_json::to_string(manifest)?;
+    let mut entries: Vec<PluginEntry> = read_yaml_vec(&dd.plugins_path())?;
 
-    sqlx::query(
-        "INSERT INTO plugins (id, name, version, description, enabled, install_path, manifest_json, installed_at) \
-         VALUES (?, ?, ?, ?, 1, ?, ?, ?) \
-         ON CONFLICT(id) DO UPDATE SET \
-            name = excluded.name, \
-            version = excluded.version, \
-            description = excluded.description, \
-            install_path = excluded.install_path, \
-            manifest_json = excluded.manifest_json",
-    )
-    .bind(&manifest.id)
-    .bind(&manifest.name)
-    .bind(&manifest.version)
-    .bind(&manifest.description)
-    .bind(install_path)
-    .bind(&manifest_json)
-    .bind(now_iso())
-    .execute(pool)
-    .await?;
+    if let Some(existing) = entries.iter_mut().find(|e| e.id == manifest.id) {
+        existing.name = manifest.name.clone();
+        existing.version = manifest.version.clone();
+        existing.description = manifest.description.clone();
+        existing.install_path = install_path.to_string();
+        existing.manifest_json = manifest_json;
+    } else {
+        entries.push(PluginEntry {
+            id: manifest.id.clone(),
+            name: manifest.name.clone(),
+            version: manifest.version.clone(),
+            description: manifest.description.clone(),
+            enabled: true,
+            install_path: install_path.to_string(),
+            manifest_json,
+            installed_at: now_iso(),
+        });
+    }
 
-    // let sql = format!("SELECT {PLUGIN_COLUMNS} FROM plugins WHERE id = ?");
-    // let row = sqlx::query_as::<_, PluginRow>(&sql)
-    //     .bind(&manifest.id)
-    //     .fetch_one(pool)
-    //     .await?;
+    write_yaml(&dd.plugins_path(), &entries)?;
 
-    let mut query_builder: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new("SELECT ");
-    query_builder.push(PLUGIN_COLUMNS);
-    query_builder.push(" FROM plugins WHERE id = ?");
-
-    // .build_query_as maps the database columns to your PluginRow struct at runtime
-    let row = query_builder
-        .build_query_as::<PluginRow>()
-        .fetch_one(pool)
-        .await?;
-
-    row.into_record()
+    // Return the record we just wrote
+    let entry = entries
+        .into_iter()
+        .find(|e| e.id == manifest.id)
+        .expect("we just inserted it");
+    entry.into_record()
 }
 
-pub async fn set_plugin_enabled(pool: &SqlitePool, id: &str, enabled: bool) -> AppResult<()> {
-    sqlx::query("UPDATE plugins SET enabled = ? WHERE id = ?")
-        .bind(enabled)
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
+pub fn set_plugin_enabled(dd: &DataDir, id: &str, enabled: bool) -> AppResult<()> {
+    let mut entries: Vec<PluginEntry> = read_yaml_vec(&dd.plugins_path())?;
+    if let Some(entry) = entries.iter_mut().find(|e| e.id == id) {
+        entry.enabled = enabled;
+    }
+    write_yaml(&dd.plugins_path(), &entries)
 }
 
-pub async fn get_plugin_install_path(pool: &SqlitePool, id: &str) -> AppResult<String> {
-    let row: (String,) = sqlx::query_as("SELECT install_path FROM plugins WHERE id = ?")
-        .bind(id)
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| AppError::NotFound(format!("plugin '{id}'")))?;
-    Ok(row.0)
+pub fn get_plugin_install_path(dd: &DataDir, id: &str) -> AppResult<String> {
+    let entries: Vec<PluginEntry> = read_yaml_vec(&dd.plugins_path())?;
+    entries
+        .into_iter()
+        .find(|e| e.id == id)
+        .map(|e| e.install_path)
+        .ok_or_else(|| AppError::NotFound(format!("plugin '{id}'")))
 }
 
-pub async fn delete_plugin(pool: &SqlitePool, id: &str) -> AppResult<()> {
-    sqlx::query("DELETE FROM plugins WHERE id = ?")
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
+pub fn delete_plugin(dd: &DataDir, id: &str) -> AppResult<()> {
+    let mut entries: Vec<PluginEntry> = read_yaml_vec(&dd.plugins_path())?;
+    entries.retain(|e| e.id != id);
+    write_yaml(&dd.plugins_path(), &entries)
 }

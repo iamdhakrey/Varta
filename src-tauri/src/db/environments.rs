@@ -1,49 +1,61 @@
-use sqlx::SqlitePool;
 use std::collections::HashMap;
 
-use crate::db::{new_id, now_iso};
+use crate::db::{new_id, read_yaml_vec, write_yaml, DataDir};
 use crate::error::AppResult;
 use crate::models::{Environment, EnvironmentVariable, EnvironmentWithVariables};
 
-pub async fn list_environments(
-    pool: &SqlitePool,
+pub fn list_environments(
+    dd: &DataDir,
     workspace_id: &str,
 ) -> AppResult<Vec<EnvironmentWithVariables>> {
-    let environments = sqlx::query_as::<_, Environment>(
-        "SELECT id, workspace_id, name, sort_order FROM environments \
-         WHERE workspace_id = ? ORDER BY sort_order ASC",
-    )
-    .bind(workspace_id)
-    .fetch_all(pool)
-    .await?;
-
-    let mut out = Vec::with_capacity(environments.len());
-    for environment in environments {
-        let variables = list_variables(pool, &environment.id).await?;
-        out.push(EnvironmentWithVariables {
-            environment,
-            variables,
-        });
-    }
-    Ok(out)
+    let path = dd.environments_path(workspace_id);
+    let mut envs: Vec<EnvironmentWithVariables> = read_yaml_vec(&path)?;
+    // Sort by sort_order ASC
+    envs.sort_by_key(|e| e.environment.sort_order);
+    Ok(envs)
 }
 
-pub async fn list_variables(
-    pool: &SqlitePool,
+pub fn list_variables(
+    dd: &DataDir,
+    workspace_id: &str,
     environment_id: &str,
 ) -> AppResult<Vec<EnvironmentVariable>> {
-    let rows = sqlx::query_as::<_, EnvironmentVariable>(
-        "SELECT id, environment_id, key, value, enabled, is_secret FROM environment_variables \
-         WHERE environment_id = ? ORDER BY sort_order ASC",
-    )
-    .bind(environment_id)
-    .fetch_all(pool)
-    .await?;
-    Ok(rows)
+    let envs = list_environments(dd, workspace_id)?;
+    Ok(envs
+        .into_iter()
+        .find(|e| e.environment.id == environment_id)
+        .map(|e| e.variables)
+        .unwrap_or_default())
 }
 
-pub async fn create_environment(
-    pool: &SqlitePool,
+/// Find which workspace an environment belongs to by scanning all
+/// workspace environment files.
+fn find_environment_workspace(dd: &DataDir, environment_id: &str) -> AppResult<String> {
+    let ws_dir = dd.workspaces_dir();
+    if ws_dir.exists() {
+        for entry in std::fs::read_dir(&ws_dir)? {
+            let entry = entry?;
+            if !entry.file_type()?.is_dir() {
+                continue;
+            }
+            let ws_id = entry.file_name().to_string_lossy().to_string();
+            let envs_path = dd.environments_path(&ws_id);
+            if envs_path.exists() {
+                let envs: Vec<EnvironmentWithVariables> =
+                    read_yaml_vec(&envs_path)?;
+                if envs.iter().any(|e| e.environment.id == environment_id) {
+                    return Ok(ws_id);
+                }
+            }
+        }
+    }
+    Err(crate::error::AppError::NotFound(format!(
+        "environment '{environment_id}'"
+    )))
+}
+
+pub fn create_environment(
+    dd: &DataDir,
     workspace_id: &str,
     name: &str,
 ) -> AppResult<Environment> {
@@ -53,89 +65,82 @@ pub async fn create_environment(
         name: name.to_string(),
         sort_order: 0,
     };
-    sqlx::query(
-        "INSERT INTO environments (id, workspace_id, name, sort_order, created_at, updated_at) \
-         VALUES (?, ?, ?, 0, ?, ?)",
-    )
-    .bind(&environment.id)
-    .bind(&environment.workspace_id)
-    .bind(&environment.name)
-    .bind(now_iso())
-    .bind(now_iso())
-    .execute(pool)
-    .await?;
+
+    let path = dd.environments_path(workspace_id);
+    let mut envs: Vec<EnvironmentWithVariables> = read_yaml_vec(&path)?;
+    envs.push(EnvironmentWithVariables {
+        environment: environment.clone(),
+        variables: Vec::new(),
+    });
+    write_yaml(&path, &envs)?;
+
     Ok(environment)
 }
 
-pub async fn rename_environment(pool: &SqlitePool, id: &str, name: &str) -> AppResult<()> {
-    sqlx::query("UPDATE environments SET name = ?, updated_at = ? WHERE id = ?")
-        .bind(name)
-        .bind(now_iso())
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
+pub fn rename_environment(dd: &DataDir, id: &str, name: &str) -> AppResult<()> {
+    let ws_id = find_environment_workspace(dd, id)?;
+    let path = dd.environments_path(&ws_id);
+    let mut envs: Vec<EnvironmentWithVariables> = read_yaml_vec(&path)?;
+    if let Some(env) = envs.iter_mut().find(|e| e.environment.id == id) {
+        env.environment.name = name.to_string();
+    }
+    write_yaml(&path, &envs)
 }
 
-pub async fn delete_environment(pool: &SqlitePool, id: &str) -> AppResult<()> {
-    sqlx::query("DELETE FROM environments WHERE id = ?")
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
+pub fn delete_environment(dd: &DataDir, id: &str) -> AppResult<()> {
+    let ws_id = find_environment_workspace(dd, id)?;
+    let path = dd.environments_path(&ws_id);
+    let mut envs: Vec<EnvironmentWithVariables> = read_yaml_vec(&path)?;
+    envs.retain(|e| e.environment.id != id);
+    write_yaml(&path, &envs)
 }
 
 /// Replaces every variable for an environment with the given set — the
 /// frontend always edits the whole variable table at once (see the
 /// Environment editor), so a clear-then-insert is simpler and avoids
 /// reconciling row-level diffs.
-pub async fn replace_variables(
-    pool: &SqlitePool,
+pub fn replace_variables(
+    dd: &DataDir,
     environment_id: &str,
     variables: &[EnvironmentVariable],
 ) -> AppResult<()> {
-    let mut tx = pool.begin().await?;
+    let ws_id = find_environment_workspace(dd, environment_id)?;
+    let path = dd.environments_path(&ws_id);
+    let mut envs: Vec<EnvironmentWithVariables> = read_yaml_vec(&path)?;
 
-    sqlx::query("DELETE FROM environment_variables WHERE environment_id = ?")
-        .bind(environment_id)
-        .execute(&mut *tx)
-        .await?;
-
-    for (index, var) in variables.iter().enumerate() {
-        sqlx::query(
-            "INSERT INTO environment_variables \
-             (id, environment_id, key, value, enabled, is_secret, sort_order) \
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
-        )
-        .bind(if var.id.is_empty() {
-            new_id()
-        } else {
-            var.id.clone()
-        })
-        .bind(environment_id)
-        .bind(&var.key)
-        .bind(&var.value)
-        .bind(var.enabled)
-        .bind(var.is_secret)
-        .bind(index as i64)
-        .execute(&mut *tx)
-        .await?;
+    if let Some(env) = envs.iter_mut().find(|e| e.environment.id == environment_id) {
+        env.variables = variables
+            .iter()
+            .enumerate()
+            .map(|(_i, v)| {
+                let mut var = v.clone();
+                if var.id.is_empty() {
+                    var.id = new_id();
+                }
+                var.environment_id = environment_id.to_string();
+                var
+            })
+            .collect();
     }
 
-    tx.commit().await?;
-    Ok(())
+    write_yaml(&path, &envs)
 }
 
 /// Loads the active environment's enabled variables as a flat map, ready
 /// for `interpolate`. Returns an empty map if no environment is active.
-pub async fn active_variable_map(
-    pool: &SqlitePool,
+pub fn active_variable_map(
+    dd: &DataDir,
     active_environment_id: Option<&str>,
 ) -> AppResult<HashMap<String, String>> {
     let Some(env_id) = active_environment_id else {
         return Ok(HashMap::new());
     };
-    let vars = list_variables(pool, env_id).await?;
+    // We need to find the workspace for this environment
+    let ws_id = match find_environment_workspace(dd, env_id) {
+        Ok(id) => id,
+        Err(_) => return Ok(HashMap::new()),
+    };
+    let vars = list_variables(dd, &ws_id, env_id)?;
     Ok(vars
         .into_iter()
         .filter(|v| v.enabled)

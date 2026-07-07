@@ -1,119 +1,160 @@
-use sqlx::{QueryBuilder, SqlitePool};
 use std::collections::HashMap;
 
-use crate::db::{new_id, now_iso};
+use crate::db::{new_id, read_yaml, write_yaml, DataDir};
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    ApiRequest, AuthConfig, Collection, CollectionTree, CookieRow, Folder, FolderNode, HttpMethod,
-    KeyValueRow, RequestBody,
+    ApiRequest, AuthConfig, Collection, CollectionTree, Folder, FolderNode, HttpMethod,
+    RequestBody,
 };
 
-/// Flat DB row for a request — JSON sub-objects stay as raw strings here;
-/// `into_api_request` parses them into the structured `ApiRequest` the
-/// frontend expects.
-#[derive(Debug, Clone, sqlx::FromRow)]
-struct RequestRow {
-    id: String,
-    collection_id: String,
-    folder_id: Option<String>,
-    name: String,
-    method: String,
-    url: String,
-    params_json: String,
-    headers_json: String,
-    cookies_json: String,
-    auth_json: String,
-    body_json: String,
-}
+// ---------------------------------------------------------------------------
+// Helpers — scan the workspace's collection directories
+// ---------------------------------------------------------------------------
 
-impl RequestRow {
-    fn into_api_request(self) -> AppResult<ApiRequest> {
-        let method = match self.method.as_str() {
-            "GET" => HttpMethod::Get,
-            "POST" => HttpMethod::Post,
-            "PUT" => HttpMethod::Put,
-            "PATCH" => HttpMethod::Patch,
-            "DELETE" => HttpMethod::Delete,
-            other => return Err(AppError::Invalid(format!("unknown HTTP method '{other}'"))),
-        };
-
-        Ok(ApiRequest {
-            id: self.id,
-            collection_id: self.collection_id,
-            folder_id: self.folder_id,
-            name: self.name,
-            method,
-            url: self.url,
-            params: serde_json::from_str::<Vec<KeyValueRow>>(&self.params_json)?,
-            headers: serde_json::from_str::<Vec<KeyValueRow>>(&self.headers_json)?,
-            cookies: serde_json::from_str::<Vec<CookieRow>>(&self.cookies_json)?,
-            auth: serde_json::from_str::<AuthConfig>(&self.auth_json)?,
-            body: serde_json::from_str::<RequestBody>(&self.body_json)?,
-        })
-    }
-}
-
-const REQUEST_COLUMNS: &str = "id, collection_id, folder_id, name, method, url, \
-    params_json, headers_json, cookies_json, auth_json, body_json";
-
-async fn fetch_requests_for_collection(
-    pool: &SqlitePool,
+/// Find which workspace a collection belongs to, by scanning all
+/// workspace dirs.  Returns `(workspace_id, collection_dir)`.
+fn find_collection_workspace(
+    dd: &DataDir,
     collection_id: &str,
-) -> AppResult<Vec<RequestRow>> {
-    // let sql = format!(
-    //     "SELECT {REQUEST_COLUMNS} FROM requests WHERE collection_id = ? ORDER BY sort_order ASC"
-    // );
-    // let rows = sqlx::query_as::<_, RequestRow>(&sql)
-    //     .bind(collection_id)
-    //     .fetch_all(pool)
-    //     .await?;
-
-    let mut query_builder: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new("SELECT ");
-    query_builder.push(REQUEST_COLUMNS);
-    query_builder.push(" FROM requests WHERE collection_id = ? ORDER BY sort_order ASC");
-
-    let rows = query_builder
-        .build_query_as::<RequestRow>()
-        .bind(collection_id)
-        .fetch_all(pool)
-        .await?;
-
-    Ok(rows)
+) -> AppResult<String> {
+    let ws_dir = dd.workspaces_dir();
+    if !ws_dir.exists() {
+        return Err(AppError::NotFound(format!("collection '{collection_id}'")));
+    }
+    for entry in std::fs::read_dir(&ws_dir)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+            continue;
+        }
+        let ws_id = entry.file_name().to_string_lossy().to_string();
+        let col_meta = dd.collection_meta_path(&ws_id, collection_id);
+        if col_meta.exists() {
+            return Ok(ws_id);
+        }
+    }
+    Err(AppError::NotFound(format!("collection '{collection_id}'")))
 }
+
+/// Find workspace_id + collection_id for a given request_id by scanning
+/// all request YAML files.
+fn find_request_location(
+    dd: &DataDir,
+    request_id: &str,
+) -> AppResult<(String, String)> {
+    let ws_dir = dd.workspaces_dir();
+    if !ws_dir.exists() {
+        return Err(AppError::NotFound(format!("request '{request_id}'")));
+    }
+    for ws_entry in std::fs::read_dir(&ws_dir)? {
+        let ws_entry = ws_entry?;
+        if !ws_entry.file_type()?.is_dir() {
+            continue;
+        }
+        let ws_id = ws_entry.file_name().to_string_lossy().to_string();
+        let cols_dir = dd.collections_dir(&ws_id);
+        if !cols_dir.exists() {
+            continue;
+        }
+        for col_entry in std::fs::read_dir(&cols_dir)? {
+            let col_entry = col_entry?;
+            if !col_entry.file_type()?.is_dir() {
+                continue;
+            }
+            let col_id = col_entry.file_name().to_string_lossy().to_string();
+            let req_path = dd.request_path(&ws_id, &col_id, request_id);
+            if req_path.exists() {
+                return Ok((ws_id, col_id));
+            }
+        }
+    }
+    Err(AppError::NotFound(format!("request '{request_id}'")))
+}
+
+fn load_requests_for_collection(
+    dd: &DataDir,
+    workspace_id: &str,
+    collection_id: &str,
+) -> AppResult<Vec<ApiRequest>> {
+    let dir = dd.requests_dir(workspace_id, collection_id);
+    if !dir.exists() {
+        return Ok(Vec::new());
+    }
+    let mut requests = Vec::new();
+    for entry in std::fs::read_dir(&dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("yaml") {
+            let req: ApiRequest = read_yaml(&path)?;
+            requests.push(req);
+        }
+    }
+    Ok(requests)
+}
+
+fn load_folders_for_collection(
+    dd: &DataDir,
+    workspace_id: &str,
+    collection_id: &str,
+) -> AppResult<Vec<Folder>> {
+    let dir = dd.folders_dir(workspace_id, collection_id);
+    if !dir.exists() {
+        return Ok(Vec::new());
+    }
+    let mut folders = Vec::new();
+    for entry in std::fs::read_dir(&dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("yaml") {
+            let folder: Folder = read_yaml(&path)?;
+            folders.push(folder);
+        }
+    }
+    folders.sort_by_key(|f| f.sort_order);
+    Ok(folders)
+}
+
+// ---------------------------------------------------------------------------
+// Public API — collection trees
+// ---------------------------------------------------------------------------
 
 /// Returns every collection in a workspace as a fully assembled tree
 /// (folders nested under folders, requests nested under both), ready for
 /// the sidebar to render in one pass.
-pub async fn get_collection_trees(
-    pool: &SqlitePool,
+pub fn get_collection_trees(
+    dd: &DataDir,
     workspace_id: &str,
 ) -> AppResult<Vec<CollectionTree>> {
-    let collections = sqlx::query_as::<_, Collection>(
-        "SELECT id, workspace_id, name, sort_order FROM collections \
-         WHERE workspace_id = ? ORDER BY sort_order ASC",
-    )
-    .bind(workspace_id)
-    .fetch_all(pool)
-    .await?;
+    let cols_dir = dd.collections_dir(workspace_id);
+    if !cols_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut collections: Vec<Collection> = Vec::new();
+    for entry in std::fs::read_dir(&cols_dir)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+            continue;
+        }
+        let col_id = entry.file_name().to_string_lossy().to_string();
+        let meta_path = dd.collection_meta_path(workspace_id, &col_id);
+        if meta_path.exists() {
+            let col: Collection = read_yaml(&meta_path)?;
+            collections.push(col);
+        }
+    }
+    collections.sort_by_key(|c| c.sort_order);
 
     let mut trees = Vec::with_capacity(collections.len());
     for collection in collections {
-        let folders = sqlx::query_as::<_, Folder>(
-            "SELECT id, collection_id, parent_folder_id, name, sort_order FROM folders \
-             WHERE collection_id = ? ORDER BY sort_order ASC",
-        )
-        .bind(&collection.id)
-        .fetch_all(pool)
-        .await?;
+        let folders = load_folders_for_collection(dd, workspace_id, &collection.id)?;
+        let all_requests = load_requests_for_collection(dd, workspace_id, &collection.id)?;
 
-        let request_rows = fetch_requests_for_collection(pool, &collection.id).await?;
         let mut requests_by_folder: HashMap<Option<String>, Vec<ApiRequest>> = HashMap::new();
-        for row in request_rows {
-            let folder_id = row.folder_id.clone();
+        for req in all_requests {
             requests_by_folder
-                .entry(folder_id)
+                .entry(req.folder_id.clone())
                 .or_default()
-                .push(row.into_api_request()?);
+                .push(req);
         }
 
         let folder_nodes = build_folder_tree(&folders, None, &mut requests_by_folder);
@@ -154,8 +195,8 @@ fn build_folder_tree(
 
 // -- Collections ---------------------------------------------------------
 
-pub async fn create_collection(
-    pool: &SqlitePool,
+pub fn create_collection(
+    dd: &DataDir,
     workspace_id: &str,
     name: &str,
 ) -> AppResult<Collection> {
@@ -165,46 +206,43 @@ pub async fn create_collection(
         name: name.to_string(),
         sort_order: 0,
     };
-    sqlx::query(
-        "INSERT INTO collections (id, workspace_id, name, sort_order, created_at, updated_at) \
-         VALUES (?, ?, ?, 0, ?, ?)",
-    )
-    .bind(&collection.id)
-    .bind(&collection.workspace_id)
-    .bind(&collection.name)
-    .bind(now_iso())
-    .bind(now_iso())
-    .execute(pool)
-    .await?;
+
+    let col_dir = dd.collection_dir(workspace_id, &collection.id);
+    std::fs::create_dir_all(&col_dir)?;
+    write_yaml(
+        &dd.collection_meta_path(workspace_id, &collection.id),
+        &collection,
+    )?;
+
     Ok(collection)
 }
 
-pub async fn rename_collection(pool: &SqlitePool, id: &str, name: &str) -> AppResult<()> {
-    sqlx::query("UPDATE collections SET name = ?, updated_at = ? WHERE id = ?")
-        .bind(name)
-        .bind(now_iso())
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
+pub fn rename_collection(dd: &DataDir, id: &str, name: &str) -> AppResult<()> {
+    let ws_id = find_collection_workspace(dd, id)?;
+    let path = dd.collection_meta_path(&ws_id, id);
+    let mut col: Collection = read_yaml(&path)?;
+    col.name = name.to_string();
+    write_yaml(&path, &col)
 }
 
-pub async fn delete_collection(pool: &SqlitePool, id: &str) -> AppResult<()> {
-    sqlx::query("DELETE FROM collections WHERE id = ?")
-        .bind(id)
-        .execute(pool)
-        .await?;
+pub fn delete_collection(dd: &DataDir, id: &str) -> AppResult<()> {
+    let ws_id = find_collection_workspace(dd, id)?;
+    let col_dir = dd.collection_dir(&ws_id, id);
+    if col_dir.exists() {
+        std::fs::remove_dir_all(&col_dir)?;
+    }
     Ok(())
 }
 
 // -- Folders --------------------------------------------------------------
 
-pub async fn create_folder(
-    pool: &SqlitePool,
+pub fn create_folder(
+    dd: &DataDir,
     collection_id: &str,
     parent_folder_id: Option<&str>,
     name: &str,
 ) -> AppResult<Folder> {
+    let ws_id = find_collection_workspace(dd, collection_id)?;
     let folder = Folder {
         id: new_id(),
         collection_id: collection_id.to_string(),
@@ -212,55 +250,76 @@ pub async fn create_folder(
         name: name.to_string(),
         sort_order: 0,
     };
-    sqlx::query(
-        "INSERT INTO folders (id, collection_id, parent_folder_id, name, sort_order, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, 0, ?, ?)",
-    )
-    .bind(&folder.id)
-    .bind(&folder.collection_id)
-    .bind(&folder.parent_folder_id)
-    .bind(&folder.name)
-    .bind(now_iso())
-    .bind(now_iso())
-    .execute(pool)
-    .await?;
+
+    let folders_dir = dd.folders_dir(&ws_id, collection_id);
+    std::fs::create_dir_all(&folders_dir)?;
+    write_yaml(
+        &dd.folder_path(&ws_id, collection_id, &folder.id),
+        &folder,
+    )?;
+
     Ok(folder)
 }
 
-pub async fn delete_folder(pool: &SqlitePool, id: &str) -> AppResult<()> {
-    sqlx::query("DELETE FROM folders WHERE id = ?")
-        .bind(id)
-        .execute(pool)
-        .await?;
+pub fn delete_folder(dd: &DataDir, id: &str) -> AppResult<()> {
+    // We need to find the folder file and also delete any requests that
+    // belong to this folder.
+    let ws_dir = dd.workspaces_dir();
+    if !ws_dir.exists() {
+        return Ok(());
+    }
+    for ws_entry in std::fs::read_dir(&ws_dir)? {
+        let ws_entry = ws_entry?;
+        if !ws_entry.file_type()?.is_dir() {
+            continue;
+        }
+        let ws_id = ws_entry.file_name().to_string_lossy().to_string();
+        let cols_dir = dd.collections_dir(&ws_id);
+        if !cols_dir.exists() {
+            continue;
+        }
+        for col_entry in std::fs::read_dir(&cols_dir)? {
+            let col_entry = col_entry?;
+            if !col_entry.file_type()?.is_dir() {
+                continue;
+            }
+            let col_id = col_entry.file_name().to_string_lossy().to_string();
+            let folder_path = dd.folder_path(&ws_id, &col_id, id);
+            if folder_path.exists() {
+                // Delete the folder file
+                std::fs::remove_file(&folder_path)?;
+                // Delete requests belonging to this folder
+                let reqs_dir = dd.requests_dir(&ws_id, &col_id);
+                if reqs_dir.exists() {
+                    for req_entry in std::fs::read_dir(&reqs_dir)? {
+                        let req_entry = req_entry?;
+                        let path = req_entry.path();
+                        if path.extension().and_then(|e| e.to_str()) == Some("yaml") {
+                            if let Ok(req) = read_yaml::<ApiRequest>(&path) {
+                                if req.folder_id.as_deref() == Some(id) {
+                                    std::fs::remove_file(&path)?;
+                                }
+                            }
+                        }
+                    }
+                }
+                return Ok(());
+            }
+        }
+    }
     Ok(())
 }
 
 // -- Requests ---------------------------------------------------------------
 
-pub async fn get_request(pool: &SqlitePool, id: &str) -> AppResult<ApiRequest> {
-    // let sql = format!("SELECT {REQUEST_COLUMNS} FROM requests WHERE id = ?");
-    // let row = sqlx::query_as::<_, RequestRow>(&sql)
-    //     .bind(id)
-    //     .fetch_optional(pool)
-    //     .await?
-    //     .ok_or_else(|| AppError::NotFound(format!("request '{id}'")))?;
-    //
-    let mut query_builder: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new("SELECT ");
-    query_builder.push(REQUEST_COLUMNS);
-    query_builder.push(" FROM requests WHERE id = ?");
-
-    let row = query_builder
-        .build_query_as::<RequestRow>()
-        .bind(id)
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| AppError::NotFound(format!("request '{id}'")))?;
-
-    row.into_api_request()
+pub fn get_request(dd: &DataDir, id: &str) -> AppResult<ApiRequest> {
+    let (ws_id, col_id) = find_request_location(dd, id)?;
+    let path = dd.request_path(&ws_id, &col_id, id);
+    read_yaml(&path)
 }
 
-pub async fn create_request(
-    pool: &SqlitePool,
+pub fn create_request(
+    dd: &DataDir,
     collection_id: &str,
     folder_id: Option<&str>,
     name: &str,
@@ -278,69 +337,33 @@ pub async fn create_request(
         auth: AuthConfig::default(),
         body: RequestBody::default(),
     };
-    save_request(pool, &request).await?;
+    save_request(dd, &request)?;
     Ok(request)
 }
 
 /// Upsert — used both to create a brand-new request row (frontend
 /// generates the id client-side when a tab opens) and to save edits.
-pub async fn save_request(pool: &SqlitePool, request: &ApiRequest) -> AppResult<()> {
-    let params_json = serde_json::to_string(&request.params)?;
-    let headers_json = serde_json::to_string(&request.headers)?;
-    let cookies_json = serde_json::to_string(&request.cookies)?;
-    let auth_json = serde_json::to_string(&request.auth)?;
-    let body_json = serde_json::to_string(&request.body)?;
+pub fn save_request(dd: &DataDir, request: &ApiRequest) -> AppResult<()> {
+    let ws_id = find_collection_workspace(dd, &request.collection_id)?;
+    let reqs_dir = dd.requests_dir(&ws_id, &request.collection_id);
+    std::fs::create_dir_all(&reqs_dir)?;
+    let path = dd.request_path(&ws_id, &request.collection_id, &request.id);
+    write_yaml(&path, request)
+}
 
-    sqlx::query(
-        "INSERT INTO requests (
-            id, collection_id, folder_id, name, method, url,
-            params_json, headers_json, cookies_json, auth_json, body_json,
-            sort_order, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-            collection_id = excluded.collection_id,
-            folder_id = excluded.folder_id,
-            name = excluded.name,
-            method = excluded.method,
-            url = excluded.url,
-            params_json = excluded.params_json,
-            headers_json = excluded.headers_json,
-            cookies_json = excluded.cookies_json,
-            auth_json = excluded.auth_json,
-            body_json = excluded.body_json,
-            updated_at = excluded.updated_at",
-    )
-    .bind(&request.id)
-    .bind(&request.collection_id)
-    .bind(&request.folder_id)
-    .bind(&request.name)
-    .bind(request.method.as_str())
-    .bind(&request.url)
-    .bind(params_json)
-    .bind(headers_json)
-    .bind(cookies_json)
-    .bind(auth_json)
-    .bind(body_json)
-    .bind(now_iso())
-    .bind(now_iso())
-    .execute(pool)
-    .await?;
-
+pub fn delete_request(dd: &DataDir, id: &str) -> AppResult<()> {
+    let (ws_id, col_id) = find_request_location(dd, id)?;
+    let path = dd.request_path(&ws_id, &col_id, id);
+    if path.exists() {
+        std::fs::remove_file(&path)?;
+    }
     Ok(())
 }
 
-pub async fn delete_request(pool: &SqlitePool, id: &str) -> AppResult<()> {
-    sqlx::query("DELETE FROM requests WHERE id = ?")
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
-pub async fn duplicate_request(pool: &SqlitePool, id: &str) -> AppResult<ApiRequest> {
-    let mut original = get_request(pool, id).await?;
+pub fn duplicate_request(dd: &DataDir, id: &str) -> AppResult<ApiRequest> {
+    let mut original = get_request(dd, id)?;
     original.id = new_id();
     original.name = format!("{} (copy)", original.name);
-    save_request(pool, &original).await?;
+    save_request(dd, &original)?;
     Ok(original)
 }
