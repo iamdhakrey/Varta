@@ -12,6 +12,7 @@ import { collections, environments } from "../../data/mock";
 import { useVartaStore } from "../../store";
 import { CollectionFolder, HttpMethod } from "../../types";
 import { WorkspaceSelector } from "./WorkspaceSelector";
+import { CollectionsTree } from "./CollectionTree";
 
 const methodColor: Record<HttpMethod, string> = {
   GET: "text-method-get",
@@ -19,6 +20,9 @@ const methodColor: Record<HttpMethod, string> = {
   PUT: "text-warning",
   PATCH: "text-primary",
   DELETE: "text-error",
+  OPTIONS: "text-text-muted",
+  HEAD: "text-text-muted",
+  QUERY: "text-text-muted",
 };
 
 function FolderNode({ folder }: { folder: CollectionFolder }) {
@@ -96,25 +100,7 @@ export default function Sidebar() {
       </div>
 
       {/* Collections tree */}
-      <div className="mt-3 flex-1 overflow-y-auto px-3">
-        <div className="mb-1.5 text-[11px] font-medium tracking-wide text-text-muted">
-          COLLECTIONS
-        </div>
-        <div className="flex flex-col gap-2">
-          {collections.map((col) => (
-            <div key={col.id}>
-              <div className="px-1.5 py-1 text-sm font-semibold text-text-primary">
-                {col.name}
-              </div>
-              <div className="flex flex-col gap-1">
-                {col.folders.map((f) => (
-                  <FolderNode key={f.id} folder={f} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <CollectionsTree />
 
       {/* Environment + actions */}
       <div className="border-t border-border p-3">
