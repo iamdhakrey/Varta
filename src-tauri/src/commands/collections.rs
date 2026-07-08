@@ -31,6 +31,7 @@ pub async fn rename_collection(
     crate::db::collections::rename_collection(&state.data_dir, &collection_id, &name)
 }
 
+#[tauri::command]
 pub async fn delete_collection(
     state: State<'_, AppState>,
     collection_id: String,
