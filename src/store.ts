@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { ApiRequest, RequestTab } from "./types";
-
+import { invoke } from "@tauri-apps/api/core";
+import { WorkspaceStore, Workspace } from "./types";
 import { sendNativeRequest } from "./services/rest";
 // import { collections } from "./data/mock";
 
@@ -166,3 +167,104 @@ export const useVartaStore = create<VartaState>((set, get) => ({
 //   }
 //   return undefined;
 // }
+
+
+
+export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
+  workspaces: [],
+  activeWorkspaceId: null,
+  isLoading: false,
+  error: null,
+
+  fetchWorkspaces: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const workspaces = await invoke<Workspace[]>("list_workspaces");
+      set({ workspaces, isLoading: false });
+    } catch (err) {
+      set({ error: String(err), isLoading: false });
+    }
+  },
+
+  createWorkspace: async (name: string) => {
+    if (!name.trim()) return;
+    set({ isLoading: true, error: null });
+    try {
+      const newWorkspace = await invoke<Workspace>("create_workspace", { name });
+      set((state) => ({
+        workspaces: [...state.workspaces, newWorkspace],
+        activeWorkspaceId: state.activeWorkspaceId ?? newWorkspace.id,
+        isLoading: false,
+      }));
+
+      // Auto-set active in backend if it's the only one
+      if (get().workspaces.length === 1) {
+        await get().setActiveWorkspace(newWorkspace.id);
+      }
+    } catch (err) {
+      set({ error: String(err), isLoading: false });
+    }
+  },
+
+  renameWorkspace: async (id: string, name: string) => {
+    if (!name.trim()) return;
+    set({ isLoading: true, error: null });
+    try {
+      await invoke("rename_workspace", { id, name });
+      set((state) => ({
+        workspaces: state.workspaces.map((w) =>
+          w.id === id ? { ...w, name, updated_at: new Date().toISOString() } : w
+        ),
+        isLoading: false,
+      }));
+    } catch (err) {
+      set({ error: String(err), isLoading: false });
+    }
+  },
+
+  deleteWorkspace: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await invoke("delete_workspace", { id });
+      set((state) => {
+        const nextWorkspaces = state.workspaces.filter((w) => w.id !== id);
+        let nextActive = state.activeWorkspaceId;
+        if (state.activeWorkspaceId === id) {
+          nextActive = nextWorkspaces.length > 0 ? nextWorkspaces[0].id : null;
+        }
+        return {
+          workspaces: nextWorkspaces,
+          activeWorkspaceId: nextActive,
+          isLoading: false,
+        };
+      });
+
+      // Sync structural fallbacks down to backend
+      const currentActive = get().activeWorkspaceId;
+      if (currentActive) {
+        await invoke("set_active_workspace", { id: currentActive });
+      }
+    } catch (err) {
+      set({ error: String(err), isLoading: false });
+    }
+  },
+
+  setActiveWorkspace: async (id: string) => {
+    try {
+      await invoke("set_active_workspace", { id });
+      set({ activeWorkspaceId: id });
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  getActiveState: async () => {
+    try {
+      const invokedActiveId = await invoke<Workspace>("get_active_state");
+      console.log("Invoked active workspace ID:", invokedActiveId.id);
+      set({ activeWorkspaceId: invokedActiveId.id });
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  }
+}));

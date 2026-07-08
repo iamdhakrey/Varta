@@ -11,6 +11,7 @@ import {
 import { collections, environments } from "../../data/mock";
 import { useVartaStore } from "../../store";
 import { CollectionFolder, HttpMethod } from "../../types";
+import { WorkspaceSelector } from "./WorkspaceSelector";
 
 const methodColor: Record<HttpMethod, string> = {
   GET: "text-method-get",
@@ -74,17 +75,11 @@ export default function Sidebar() {
   return (
     <aside className="flex h-full w-[280px] shrink-0 flex-col border-r border-border bg-bg">
       {/* Workspace switcher */}
-      <div className="flex items-center justify-between border-b border-border px-3 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-gradient text-[11px] font-semibold text-white">
-            A
-          </div>
-          <span className="text-sm font-medium text-text-primary">
-            Acme workspace
-          </span>
-        </div>
-        <ChevronDown size={14} className="text-text-secondary" />
-      </div>
+      {/* Top Section - Workspace Picker */}
+      <WorkspaceSelector />
+
+      {/* Divider */}
+      <div className="h-[1px] bg-borderMuted w-full" />
 
       {/* Search */}
       <div className="px-3 pt-3">

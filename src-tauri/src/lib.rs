@@ -1,7 +1,11 @@
 use tauri::Manager;
 
+use crate::commands::collections::{
+    create_collection, delete_collection, get_collections_trees, rename_collection,
+};
 use crate::commands::workspaces::{
-    create_workspace, delete_workspace, list_workspaces, rename_workspace, set_active_workspace,
+    create_workspace, delete_workspace, get_active_state, list_workspaces, rename_workspace,
+    set_active_workspace,
 };
 use crate::http::send_request;
 use crate::state::AppState;
@@ -32,8 +36,7 @@ pub fn run() {
                 .expect("resolve app data dir");
             std::fs::create_dir_all(&data_dir).expect("create app data dir");
 
-            let data_dir =
-                db::init_data_dir(&data_dir).expect("initialize data directory");
+            let data_dir = db::init_data_dir(&data_dir).expect("initialize data directory");
 
             app_handle.manage(AppState { data_dir });
 
@@ -46,7 +49,13 @@ pub fn run() {
             create_workspace,
             rename_workspace,
             delete_workspace,
-            set_active_workspace
+            set_active_workspace,
+            get_active_state,
+            //  Collection commands
+            get_collections_trees,
+            create_collection,
+            rename_collection,
+            delete_collection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

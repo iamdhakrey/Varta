@@ -122,3 +122,26 @@ export interface RequestTab {
   isSending: boolean;
   error?: string;
 }
+
+
+export interface Workspace {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+
+export interface WorkspaceStore {
+  workspaces: Workspace[];
+  activeWorkspaceId: string | null;
+  isLoading: boolean;
+  error: string | null;
+
+  fetchWorkspaces: () => Promise<void>;
+  createWorkspace: (name: string) => Promise<void>;
+  renameWorkspace: (id: string, name: string) => Promise<void>;
+  deleteWorkspace: (id: string) => Promise<void>;
+  setActiveWorkspace: (id: string) => Promise<void>;
+  getActiveState: () => Promise<void>;
+}
