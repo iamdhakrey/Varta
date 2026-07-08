@@ -1,4 +1,4 @@
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD" | "QUERY";
 
 export type AuthType = "none" | "basic" | "bearer" | "apiKey";
 
@@ -131,11 +131,39 @@ export interface Workspace {
   updated_at: string;
 }
 
+export interface Folder {
+  id: string;
+  collection_id: string;
+  parent_folder_id: string | null;
+  name: string;
+  sort_order: number;
+}
+
+export interface FolderNode {
+  folder: Folder;
+  children: FolderNode[];
+  requests: ApiRequest[];
+}
+
+export interface Collection {
+  id: string;
+  workspace_id: string;
+  name: string;
+  sort_order: number;
+}
+export interface CollectionTree {
+  collection: Collection;
+  folders: FolderNode[];
+  requests: ApiRequest[];
+}
+
 
 export interface WorkspaceStore {
   workspaces: Workspace[];
+  collectionTrees: CollectionTree[],
   activeWorkspaceId: string | null;
   isLoading: boolean;
+  isLoadingCollections: boolean;
   error: string | null;
 
   fetchWorkspaces: () => Promise<void>;
@@ -144,4 +172,12 @@ export interface WorkspaceStore {
   deleteWorkspace: (id: string) => Promise<void>;
   setActiveWorkspace: (id: string) => Promise<void>;
   getActiveState: () => Promise<void>;
+
+  // Collections
+  fetchCollections: () => Promise<void>;
+  createCollection: (name: string) => Promise<void>;
+  renameCollection: (id: string, name: string) => Promise<void>;
+  deleteCollection: (id: string) => Promise<void>;
+  // addRequestToCollection: (collectionId: string, request: ApiRequest) => Promise<void>;
+  // removeRequestFromCollection: (collectionId: string, requestId: string) => Promise<void>;
 }

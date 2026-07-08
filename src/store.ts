@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ApiRequest, RequestTab } from "./types";
+import { ApiRequest, CollectionTree, HttpMethod, RequestTab } from "./types";
 import { invoke } from "@tauri-apps/api/core";
 import { WorkspaceStore, Workspace } from "./types";
 import { sendNativeRequest } from "./services/rest";
@@ -158,22 +158,14 @@ export const useVartaStore = create<VartaState>((set, get) => ({
   setEnv: (id) => set({ activeEnvId: id }),
 }));
 
-// export function findRequestById(id: string) {
-//   for (const col of collections) {
-//     for (const folder of col.folders) {
-//       const found = folder.requests.find((r) => r.id === id);
-//       if (found) return found;
-//     }
-//   }
-//   return undefined;
-// }
-
 
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   workspaces: [],
+  collectionTrees: [],
   activeWorkspaceId: null,
   isLoading: false,
+  isLoadingCollections: false,
   error: null,
 
   fetchWorkspaces: async () => {
@@ -266,5 +258,94 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     } catch (err) {
       set({ error: String(err) });
     }
-  }
+  },
+
+  // Collections
+  fetchCollections: async () => {
+    const { activeWorkspaceId } = get();
+    if (!activeWorkspaceId) return;
+    set({ isLoadingCollections: true });
+
+    try {
+      const collections = await invoke<CollectionTree[]>("get_collection_trees", {
+           workspaceid: activeWorkspaceId,
+      });
+      console.log("Fetched collections:", collections);
+      if (!collections) {
+        set({ error: "No collections found", isLoadingCollections: false });
+        return;
+      }
+      set({ collectionTrees: collections, isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error fetching collections:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+  createCollection: async (name: string) => {
+    const { activeWorkspaceId } = get();
+    if (!activeWorkspaceId || !name.trim()) return;
+    set({ isLoadingCollections: true });
+
+    try {
+      await invoke<CollectionTree>("create_collection", {
+        workspaceid: activeWorkspaceId,
+        name,
+      });
+      await get().fetchCollections(); // Refresh the collection list after creation
+      set({
+        // collectionTrees: [...state.collectionTrees, newCollection],
+        isLoadingCollections: false,
+      });
+    } catch (err) {
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+  deleteCollection: async (collectionId: string) => {
+    set({ isLoadingCollections: true });
+    try {
+      await invoke("delete_collection", { collectionid: collectionId });
+      set((state) => ({
+        collectionTrees: state.collectionTrees.filter(
+          (c) => c.collection.id !== collectionId
+        ),
+        isLoadingCollections: false,
+      }));
+    } catch (err) {
+      console.error("Error deleting collection:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+  renameCollection: async (collectionId: string, name: string) => {
+    if (!name.trim()) return;
+    set({ isLoadingCollections: true });
+    try {
+      await invoke("rename_collection", { collectionid: collectionId, name });
+      set((state) => ({
+        collectionTrees: state.collectionTrees.map((c) =>
+          c.collection.id === collectionId
+            ? { ...c, collection: { ...c.collection, name } }
+            : c
+        ),
+        isLoadingCollections: false,
+      }));
+    } catch (err) {
+      console.log("Error renaming collection:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
 }));
+
+
+export const MethodStyles: Record<HttpMethod, string> = {
+  GET: "text-method-get",
+  POST: "text-secondary",
+  PUT: "text-warning",
+  PATCH: "text-primary",
+  DELETE: "text-error",
+  OPTIONS: "text-text-muted",
+  HEAD: "text-text-muted",
+  QUERY: "text-text-muted",
+};
