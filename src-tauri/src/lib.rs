@@ -1,7 +1,7 @@
 use tauri::Manager;
 
 use crate::commands::collections::{
-    create_collection, delete_collection, get_collections_trees, rename_collection,
+    create_collection, delete_collection, get_collection_trees, rename_collection,
 };
 use crate::commands::workspaces::{
     create_workspace, delete_workspace, get_active_state, list_workspaces, rename_workspace,
@@ -52,7 +52,7 @@ pub fn run() {
             set_active_workspace,
             get_active_state,
             //  Collection commands
-            get_collections_trees,
+            get_collection_trees,
             create_collection,
             rename_collection,
             delete_collection,

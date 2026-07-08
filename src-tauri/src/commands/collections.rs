@@ -6,35 +6,39 @@ use crate::{
 };
 
 #[tauri::command]
-pub async fn get_collections_trees(
+pub async fn get_collection_trees(
     state: State<'_, AppState>,
-    workspace_id: String,
+    workspaceid: String,
 ) -> crate::error::AppResult<Vec<CollectionTree>> {
-    crate::db::collections::get_collection_trees(&state.data_dir, &workspace_id)
+    crate::db::collections::get_collection_trees(&state.data_dir, &workspaceid)
 }
 
 #[tauri::command]
 pub async fn create_collection(
     state: State<'_, AppState>,
-    workspace_id: String,
+    workspaceid: String,
     name: String,
 ) -> crate::error::AppResult<Collection> {
-    crate::db::collections::create_collection(&state.data_dir, &workspace_id, &name)
+    println!(
+        "Creating collection '{}' in workspace '{}'",
+        name, workspaceid
+    );
+    crate::db::collections::create_collection(&state.data_dir, &workspaceid, &name)
 }
 
 #[tauri::command]
 pub async fn rename_collection(
     state: State<'_, AppState>,
-    collection_id: String,
+    collectionid: String,
     name: String,
 ) -> crate::error::AppResult<()> {
-    crate::db::collections::rename_collection(&state.data_dir, &collection_id, &name)
+    crate::db::collections::rename_collection(&state.data_dir, &collectionid, &name)
 }
 
 #[tauri::command]
 pub async fn delete_collection(
     state: State<'_, AppState>,
-    collection_id: String,
+    collectionid: String,
 ) -> crate::error::AppResult<()> {
-    crate::db::collections::delete_collection(&state.data_dir, &collection_id)
+    crate::db::collections::delete_collection(&state.data_dir, &collectionid)
 }
