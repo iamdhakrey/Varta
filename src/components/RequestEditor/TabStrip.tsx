@@ -1,14 +1,14 @@
 import { Plus, X, Save, Copy, History, Settings } from "lucide-react";
-import { useVartaStore } from "../../store";
+import { MethodStyles, useVartaStore } from "../../store";
 import { HttpMethod } from "../../types";
 
-const methodColor: Record<HttpMethod, string> = {
-  GET: "text-method-get",
-  POST: "text-secondary",
-  PUT: "text-warning",
-  PATCH: "text-primary",
-  DELETE: "text-error",
-};
+// const methodColor: Record<HttpMethod, string> = {
+//   GET: "text-method-get",
+//   POST: "text-secondary",
+//   PUT: "text-warning",
+//   PATCH: "text-primary",
+//   DELETE: "text-error",
+// };
 
 export default function TabStrip() {
   const tabs = useVartaStore((s) => s.tabs);
@@ -34,7 +34,7 @@ export default function TabStrip() {
               }`}
             >
               <span
-                className={`text-[10px] font-semibold ${methodColor[tab.request.method as HttpMethod]}`}
+                className={`text-[10px] font-semibold ${MethodStyles[tab.request.method as HttpMethod]}`}
               >
                 {tab.request.method}
               </span>

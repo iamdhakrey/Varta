@@ -1,74 +1,16 @@
 import { useState } from "react";
 import {
-  ChevronDown,
-  ChevronRight,
-  Folder,
   Search,
   Plus,
   Upload,
   Cloud,
 } from "lucide-react";
-import { collections, environments } from "../../data/mock";
+import { environments } from "../../data/mock";
 import { useVartaStore } from "../../store";
-import { CollectionFolder, HttpMethod } from "../../types";
+// import { CollectionFolder, HttpMethod } from "../../types";
 import { WorkspaceSelector } from "./WorkspaceSelector";
 import { CollectionsTree } from "./CollectionTree";
 
-const methodColor: Record<HttpMethod, string> = {
-  GET: "text-method-get",
-  POST: "text-secondary",
-  PUT: "text-warning",
-  PATCH: "text-primary",
-  DELETE: "text-error",
-  OPTIONS: "text-text-muted",
-  HEAD: "text-text-muted",
-  QUERY: "text-text-muted",
-};
-
-function FolderNode({ folder }: { folder: CollectionFolder }) {
-  const [open, setOpen] = useState(true);
-  const openRequest = useVartaStore((s) => s.openRequest);
-  const activeTabId = useVartaStore((s) => s.activeTabId);
-
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm font-medium text-text-primary hover:bg-panel-raised"
-      >
-        {open ? (
-          <ChevronDown size={13} className="text-text-secondary" />
-        ) : (
-          <ChevronRight size={13} className="text-text-secondary" />
-        )}
-        <Folder size={13} className="text-secondary" />
-        {folder.name}
-      </button>
-      {open && (
-        <div className="ml-5 flex flex-col gap-0.5 border-l border-borderMuted pl-2">
-          {folder.requests.map((req) => (
-            <button
-              key={req.id}
-              onClick={() => openRequest(req)}
-              className={`flex items-center gap-2 rounded-md px-2 py-1 text-left text-sm transition-colors ${
-                activeTabId === req.id
-                  ? "bg-panel-raised text-text-primary"
-                  : "text-text-secondary hover:bg-panel-raised hover:text-text-primary"
-              }`}
-            >
-              <span
-                className={`w-9 shrink-0 text-[10px] font-semibold ${methodColor[req.method as HttpMethod]}`}
-              >
-                {req.method}
-              </span>
-              <span className="truncate">{req.name}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function Sidebar() {
   const [query, setQuery] = useState("");

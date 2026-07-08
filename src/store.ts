@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ApiRequest, CollectionTree, RequestTab } from "./types";
+import { ApiRequest, CollectionTree, HttpMethod, RequestTab } from "./types";
 import { invoke } from "@tauri-apps/api/core";
 import { WorkspaceStore, Workspace } from "./types";
 import { sendNativeRequest } from "./services/rest";
@@ -337,3 +337,15 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 }));
+
+
+export const MethodStyles: Record<HttpMethod, string> = {
+  GET: "text-method-get",
+  POST: "text-secondary",
+  PUT: "text-warning",
+  PATCH: "text-primary",
+  DELETE: "text-error",
+  OPTIONS: "text-text-muted",
+  HEAD: "text-text-muted",
+  QUERY: "text-text-muted",
+};

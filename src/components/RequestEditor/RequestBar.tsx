@@ -1,16 +1,9 @@
 import { ChevronDown } from "lucide-react";
-import { useVartaStore } from "../../store";
+import { MethodStyles, useVartaStore } from "../../store";
 import { HttpMethod, RequestTab } from "../../types";
 
 const methods: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
-const methodStyles: Record<HttpMethod, string> = {
-  GET: "text-method-get",
-  POST: "text-secondary",
-  PUT: "text-warning",
-  PATCH: "text-primary",
-  DELETE: "text-error",
-};
 
 export default function RequestBar({ tab }: { tab: RequestTab }) {
   const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
@@ -24,7 +17,7 @@ export default function RequestBar({ tab }: { tab: RequestTab }) {
           onChange={(e) =>
             updateActiveRequest({ method: e.target.value as HttpMethod })
           }
-          className={`input-shell appearance-none pr-7 font-semibold ${methodStyles[tab.request.method as HttpMethod]}`}
+          className={`input-shell appearance-none pr-7 font-semibold ${MethodStyles[tab.request.method as HttpMethod]}`}
         >
           {methods.map((m) => (
             <option key={m} value={m} className="bg-panel text-text-primary">

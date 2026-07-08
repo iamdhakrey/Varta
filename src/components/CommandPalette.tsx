@@ -1,42 +1,43 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { useVartaStore } from "../store";
-import { collections } from "../data/mock";
+// import { collections } from "../data/mock";
 
-interface PaletteItem {
-  id: string;
-  label: string;
-  hint: string;
-  action: () => void;
-}
+// interface PaletteItem {
+//   id: string;
+//   label: string;
+//   hint: string;
+//   action: () => void;
+// }
 
 export default function CommandPalette() {
   const isOpen = useVartaStore((s) => s.isCommandPaletteOpen);
   const toggle = useVartaStore((s) => s.toggleCommandPalette);
-  const openRequest = useVartaStore((s) => s.openRequest);
-  const newTab = useVartaStore((s) => s.newTab);
+  // const openRequest = useVartaStore((s) => s.openRequest);
+  // const newTab = useVartaStore((s) => s.newTab);
+
   const [query, setQuery] = useState("");
 
-  const items: PaletteItem[] = useMemo(() => {
-    const requestItems = collections.flatMap((c) =>
-      c.folders.flatMap((f) =>
-        f.requests.map((r) => ({
-          id: r.id,
-          label: r.name,
-          hint: `${r.method} · ${c.name}`,
-          action: () => openRequest(r),
-        })),
-      ),
-    );
-    return [
-      { id: "new-tab", label: "New request", hint: "Ctrl+T", action: newTab },
-      ...requestItems,
-    ];
-  }, [openRequest, newTab]);
+  // const items: PaletteItem[] = useMemo(() => {
+  //   const requestItems = collections.flatMap((c) =>
+  //     c.folders.flatMap((f) =>
+  //       f.requests.map((r) => ({
+  //         id: r.id,
+  //         label: r.name,
+  //         hint: `${r.method} · ${c.name}`,
+  //         action: () => openRequest(r),
+  //       })),
+  //     ),
+  //   );
+  //   return [
+  //     { id: "new-tab", label: "New request", hint: "Ctrl+T", action: newTab },
+  //     ...requestItems,
+  //   ];
+  // }, [openRequest, newTab]);
 
-  const filtered = items.filter((i) =>
-    i.label.toLowerCase().includes(query.toLowerCase()),
-  );
+  // const filtered = items.filter((i) =>
+  //   i.label.toLowerCase().includes(query.toLowerCase()),
+  // );
 
   useEffect(() => {
     if (!isOpen) setQuery("");
@@ -65,7 +66,7 @@ export default function CommandPalette() {
           <kbd className="kbd">Esc</kbd>
         </div>
         <div className="max-h-72 overflow-y-auto py-1">
-          {filtered.map((item) => (
+          {/*{filtered.map((item) => (
             <button
               key={item.id}
               onClick={() => {
@@ -80,7 +81,7 @@ export default function CommandPalette() {
           ))}
           {filtered.length === 0 && (
             <p className="px-3 py-3 text-sm text-text-muted">No matches.</p>
-          )}
+          )}*/}
         </div>
       </div>
     </div>

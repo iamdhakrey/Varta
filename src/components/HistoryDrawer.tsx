@@ -1,15 +1,9 @@
 import { X } from "lucide-react";
-import { useVartaStore } from "../store";
+import { MethodStyles, useVartaStore } from "../store";
 import { historyEntries } from "../data/mock";
-import { HttpMethod } from "../types";
+// import { HttpMethod } from "../types";
 
-const methodColor: Record<HttpMethod, string> = {
-  GET: "text-method-get",
-  POST: "text-secondary",
-  PUT: "text-warning",
-  PATCH: "text-primary",
-  DELETE: "text-error",
-};
+
 
 function statusColor(status: number) {
   if (status >= 200 && status < 300) return "text-success";
@@ -44,7 +38,7 @@ export default function HistoryDrawer() {
           >
             <div className="flex items-center gap-2">
               <span
-                className={`text-[10px] font-semibold ${methodColor[h.method]}`}
+                className={`text-[10px] font-semibold ${MethodStyles[h.method]}`}
               >
                 {h.method}
               </span>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useWorkspaceStore } from "../../store";
 // import { FolderNodeItem } from "./FolderNodeItem";
-import { RequestItem } from "./RequestItem";
+// import { RequestItem } from "./RequestItem";
 import { Plus, Trash2, Library, Edit2, Check, X } from "lucide-react";
 
 export const CollectionsTree: React.FC = () => {
