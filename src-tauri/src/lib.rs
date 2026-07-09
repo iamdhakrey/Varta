@@ -1,7 +1,9 @@
 use tauri::Manager;
 
 use crate::commands::collections::{
-    create_collection, delete_collection, get_collection_trees, rename_collection,
+    clone_collection, create_collection, create_folder, create_request, delete_collection,
+    delete_folder, delete_request, duplicate_request, get_collection_trees, get_request,
+    rename_collection, rename_folder, rename_request, save_request,
 };
 use crate::commands::workspaces::{
     create_workspace, delete_workspace, get_active_state, list_workspaces, rename_workspace,
@@ -56,6 +58,18 @@ pub fn run() {
             create_collection,
             rename_collection,
             delete_collection,
+            clone_collection,
+            // Folder commands
+            create_folder,
+            rename_folder,
+            delete_folder,
+            // Request commands
+            create_request,
+            rename_request,
+            delete_request,
+            get_request,
+            duplicate_request,
+            save_request,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

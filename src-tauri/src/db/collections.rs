@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use crate::db::{new_id, read_yaml, write_yaml, DataDir};
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    ApiRequest, AuthConfig, Collection, CollectionTree, Folder, FolderNode, HttpMethod,
-    RequestBody,
+    ApiRequest, AuthConfig, Collection, CollectionTree, Folder, FolderNode, HttpMethod, RequestBody,
 };
 
 // ---------------------------------------------------------------------------
@@ -13,10 +12,7 @@ use crate::models::{
 
 /// Find which workspace a collection belongs to, by scanning all
 /// workspace dirs.  Returns `(workspace_id, collection_dir)`.
-fn find_collection_workspace(
-    dd: &DataDir,
-    collection_id: &str,
-) -> AppResult<String> {
+fn find_collection_workspace(dd: &DataDir, collection_id: &str) -> AppResult<String> {
     let ws_dir = dd.workspaces_dir();
     if !ws_dir.exists() {
         return Err(AppError::NotFound(format!("collection '{collection_id}'")));
@@ -37,10 +33,7 @@ fn find_collection_workspace(
 
 /// Find workspace_id + collection_id for a given request_id by scanning
 /// all request YAML files.
-fn find_request_location(
-    dd: &DataDir,
-    request_id: &str,
-) -> AppResult<(String, String)> {
+fn find_request_location(dd: &DataDir, request_id: &str) -> AppResult<(String, String)> {
     let ws_dir = dd.workspaces_dir();
     if !ws_dir.exists() {
         return Err(AppError::NotFound(format!("request '{request_id}'")));
@@ -120,10 +113,7 @@ fn load_folders_for_collection(
 /// Returns every collection in a workspace as a fully assembled tree
 /// (folders nested under folders, requests nested under both), ready for
 /// the sidebar to render in one pass.
-pub fn get_collection_trees(
-    dd: &DataDir,
-    workspace_id: &str,
-) -> AppResult<Vec<CollectionTree>> {
+pub fn get_collection_trees(dd: &DataDir, workspace_id: &str) -> AppResult<Vec<CollectionTree>> {
     let cols_dir = dd.collections_dir(workspace_id);
     if !cols_dir.exists() {
         return Ok(Vec::new());
@@ -195,11 +185,7 @@ fn build_folder_tree(
 
 // -- Collections ---------------------------------------------------------
 
-pub fn create_collection(
-    dd: &DataDir,
-    workspace_id: &str,
-    name: &str,
-) -> AppResult<Collection> {
+pub fn create_collection(dd: &DataDir, workspace_id: &str, name: &str) -> AppResult<Collection> {
     let collection = Collection {
         id: new_id(),
         workspace_id: workspace_id.to_string(),
@@ -234,6 +220,35 @@ pub fn delete_collection(dd: &DataDir, id: &str) -> AppResult<()> {
     Ok(())
 }
 
+pub fn clone_collection(dd: &DataDir, id: &str) -> AppResult<Collection> {
+    let ws_id = find_collection_workspace(dd, id)?;
+    let col_dir = dd.collection_dir(&ws_id, id);
+    if !col_dir.exists() {
+        return Err(AppError::NotFound(format!("collection '{id}'")));
+    }
+
+    let new_collection = Collection {
+        id: new_id(),
+        workspace_id: ws_id.clone(),
+        name: format!("{} (copy)", id),
+        sort_order: 0,
+    };
+    let new_col_dir = dd.collection_dir(&ws_id, &new_collection.id);
+    std::fs::create_dir_all(&new_col_dir)?;
+
+    // Copy all files from the old collection dir to the new one
+    for entry in std::fs::read_dir(&col_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            let file_name = path.file_name().unwrap();
+            std::fs::copy(&path, new_col_dir.join(file_name))?;
+        }
+    }
+
+    Ok(new_collection)
+}
+
 // -- Folders --------------------------------------------------------------
 
 pub fn create_folder(
@@ -253,12 +268,22 @@ pub fn create_folder(
 
     let folders_dir = dd.folders_dir(&ws_id, collection_id);
     std::fs::create_dir_all(&folders_dir)?;
-    write_yaml(
-        &dd.folder_path(&ws_id, collection_id, &folder.id),
-        &folder,
-    )?;
+    write_yaml(&dd.folder_path(&ws_id, collection_id, &folder.id), &folder)?;
 
     Ok(folder)
+}
+
+pub fn rename_folder(
+    dd: &DataDir,
+    collection_id: &str,
+    folder_id: &str,
+    name: &str,
+) -> AppResult<()> {
+    let ws_id = find_collection_workspace(dd, collection_id)?;
+    let path = dd.folder_path(&ws_id, collection_id, folder_id);
+    let mut folder: Folder = read_yaml(&path)?;
+    folder.name = name.to_string();
+    write_yaml(&path, &folder)
 }
 
 pub fn delete_folder(dd: &DataDir, id: &str) -> AppResult<()> {
@@ -366,4 +391,10 @@ pub fn duplicate_request(dd: &DataDir, id: &str) -> AppResult<ApiRequest> {
     original.name = format!("{} (copy)", original.name);
     save_request(dd, &original)?;
     Ok(original)
+}
+
+pub fn rename_request(dd: &DataDir, id: &str, name: &str) -> AppResult<()> {
+    let mut request = get_request(dd, id)?;
+    request.name = name.to_string();
+    save_request(dd, &request)
 }
