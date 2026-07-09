@@ -1,39 +1,105 @@
-name: Release
+name: Release on PR Merge
 
 on:
-  push:
-    tags:
-      - "v*"
+  pull_request:
+    types: [closed]
+    branches: [main]
 
 jobs:
-  release:
+  # ==========================================
+  # JOB 1: Bump Versions, Commit, and Tag
+  # ==========================================
+  bump-and-tag:
+    name: Bump Version & Create Tag
+    # ONLY run if the PR was actually merged (not just closed without merging)
+    # AND the source branch name started with "release/v"
+    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/v')
+    runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.extract.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main # Checkout main branch after merge
+          fetch-depth: 0
 
+      - name: Extract Version from Branch Name
+        id: extract
+        run: |
+          # Extracts "1.2.3" from "release/v1.2.3"
+          BRANCH_NAME="${{ github.head_ref }}"
+          VERSION="${BRANCH_NAME#release/v}"
+          TAG="v$VERSION"
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Preparing release for $TAG"
+
+      - name: Update Version in Files
+        run: |
+          jq --arg v "$VERSION" '.version = $v' package.json > package.tmp.json
+          mv package.tmp.json package.json
+          
+          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > tauri.tmp.json
+          mv tauri.tmp.json src-tauri/tauri.conf.json
+          
+          sed -i -e "0,/^version = .*/s/^version = .*/version = \"$VERSION\"/" src-tauri/Cargo.toml
+
+      - name: Commit Bump and Push Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
+          
+          # Only commit if files actually changed to prevent failure
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "chore: bump version to ${{ env.VERSION }} [skip ci]"
+            git push origin main
+          fi
+          
+          # Create and push the Git Tag
+          git tag ${{ steps.extract.outputs.tag }}
+          git push origin ${{ steps.extract.outputs.tag }}
+
+  # ==========================================
+  # JOB 2: Build Matrix & Publish to GitHub
+  # ==========================================
+  release:
+    name: Build & Release
+    needs: bump-and-tag # Wait for Job 1 to finish
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: ubuntu-22.04
             args: ""
-
           - platform: windows-latest
             args: ""
-
           - platform: macos-latest
             args: --target aarch64-apple-darwin
-
 
     runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Checkout the exact tag created in Job 1
+          ref: ${{ needs.bump-and-tag.outputs.tag }}
 
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -45,15 +111,17 @@ jobs:
             librsvg2-dev \
             patchelf
 
-      - run: bun install --frozen-lockfile
+      - name: Install Bun Dependencies
+        run: bun install --frozen-lockfile
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Build and Release Tauri App
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "V${{ github.ref_name }}"
+          # Tie the release artifacts to the newly pushed tag
+          tagName: ${{ needs.bump-and-tag.outputs.tag }}
+          releaseName: "Release ${{ needs.bump-and-tag.outputs.tag }}"
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
