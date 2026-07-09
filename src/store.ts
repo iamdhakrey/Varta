@@ -336,6 +336,85 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       set({ error: String(err), isLoadingCollections: false });
     }
   },
+
+  cloneCollection: async (collectionId: string, newName: string) => {
+    if (!newName.trim()) return;
+    set({ isLoadingCollections: true });
+    try {
+      await invoke("clone_collection", { collectionid: collectionId, newname: newName });
+      await get().fetchCollections(); // Refresh the collection list after cloning
+      set({ isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error cloning collection:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+
+  // Folders
+  createFolder: async (collectionId: string, parentFolderId: string | null, name: string) => {
+    if (!name.trim()) return;
+    set({ isLoadingCollections: true });
+    try {
+      await invoke("create_folder", { collectionid: collectionId, parentfolderid: parentFolderId, name });
+      await get().fetchCollections(); // Refresh the collection list after folder creation
+      set({ isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error creating folder:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+  deleteFolder: async (folderId: string) => {
+    set({ isLoadingCollections: true });
+    try {
+      await invoke("delete_folder", { folderid: folderId });
+      await get().fetchCollections(); // Refresh the collection list after folder deletion
+      set({ isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error deleting folder:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+  renameFolder: async (collectionId: string, folderId: string, name: string) => {
+    if (!name.trim()) return;
+    set({ isLoadingCollections: true });
+    try {
+      await invoke("rename_folder", { collectionid: collectionId, folderid: folderId, name });
+      await get().fetchCollections(); // Refresh the collection list after folder renaming
+      set({ isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error renaming folder:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+  createRequest: async (collectionId: string, folderId: string | null, name: string) => {
+    set({ isLoadingCollections: true });
+    try {
+      console.log("Creating request:", name, "in collection:", collectionId, "folder:", folderId);
+      await invoke("create_request", { collectionid: collectionId, folderid: folderId, name: name });
+      await get().fetchCollections(); // Refresh the collection list after request creation
+      set({ isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error creating request:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+  deleteRequest: async (requestId: string) => {
+    set({ isLoadingCollections: true });
+    try {
+      await invoke("delete_request", { requestid: requestId });
+      await get().fetchCollections(); // Refresh the collection list after request deletion
+      set({ isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error deleting request:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
 }));
 
 
