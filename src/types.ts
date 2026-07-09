@@ -133,8 +133,8 @@ export interface Workspace {
 
 export interface Folder {
   id: string;
-  collection_id: string;
-  parent_folder_id: string | null;
+  collectionId: string;
+  parentFolderId: string | null;
   name: string;
   sort_order: number;
 }
@@ -178,6 +178,18 @@ export interface WorkspaceStore {
   createCollection: (name: string) => Promise<void>;
   renameCollection: (id: string, name: string) => Promise<void>;
   deleteCollection: (id: string) => Promise<void>;
+  cloneCollection: (id: string, newName: string) => Promise<void>;
   // addRequestToCollection: (collectionId: string, request: ApiRequest) => Promise<void>;
   // removeRequestFromCollection: (collectionId: string, requestId: string) => Promise<void>;
+
+  // Folders
+  createFolder: (collectionId: string, parentFolderId: string | null, name: string) => Promise<void>;
+  renameFolder: (collectionId: string,folderId: string, name: string) => Promise<void>;
+  deleteFolder: (folderId: string) => Promise<void>;
+
+
+  // Request
+  createRequest: (collectionId: string, folderId: string | null, name: string) => Promise<void>;
+  // updateRequest: (requestId: string, updatedRequest: Partial<ApiRequest>) => Promise<void>;
+  deleteRequest: (requestId: string) => Promise<void>;
 }
