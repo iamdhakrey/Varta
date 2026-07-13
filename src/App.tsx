@@ -6,6 +6,7 @@ import HistoryDrawer from "./components/HistoryDrawer";
 import { useVartaStore } from "./store";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useResizablePanel } from "./hooks/useResizablePanel";
+import { SettingsPanel } from "./components/SettingsPanel";
 
 export default function App() {
   useKeyboardShortcuts();
@@ -46,6 +47,7 @@ export default function App() {
 
       <HistoryDrawer />
       <CommandPalette />
+      <SettingsPanel />
     </div>
   );
 }

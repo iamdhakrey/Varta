@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ApiRequest, CollectionTree, HttpMethod, RequestTab } from "./types";
+import { ApiRequest, AppSettings, CollectionTree, HttpMethod, RequestTab } from "./types";
 import { invoke } from "@tauri-apps/api/core";
 import { WorkspaceStore, Workspace } from "./types";
 import { sendNativeRequest } from "./services/rest";
@@ -18,6 +18,7 @@ interface VartaState {
   setActiveTab: (tabId: string) => void;
   updateActiveRequest: (patch: Partial<ApiRequest>) => void;
   sendActiveRequest: () => void;
+  saveActiveRequest: () => void;
   toggleCommandPalette: (open?: boolean) => void;
   toggleHistory: (open?: boolean) => void;
   setEnv: (id: string) => void;
@@ -136,11 +137,11 @@ export const useVartaStore = create<VartaState>((set, get) => ({
           tabs: s.tabs.map((t) =>
             t.id === activeTabId
               ? {
-                  ...t,
-                  isSending: false,
-                  response: undefined,
-                  error: errorMessage,
-                }
+                ...t,
+                isSending: false,
+                response: undefined,
+                error: errorMessage,
+              }
               : t,
           ),
         }));
@@ -156,6 +157,29 @@ export const useVartaStore = create<VartaState>((set, get) => ({
     set((s) => ({ isHistoryOpen: open ?? !s.isHistoryOpen })),
 
   setEnv: (id) => set({ activeEnvId: id }),
+
+
+  saveActiveRequest: async () => {
+    const state = get();
+    const activeTab = state.tabs.find(t => t.id === state.activeTabId);
+
+    if (!activeTab || !activeTab.isDirty) return;
+
+    try {
+      // Assuming you have this command in your Rust backend
+      await invoke("save_request", { request: activeTab.request });
+
+      // Clear dirty flag on success
+      set((state) => ({
+        tabs: state.tabs.map(t =>
+          t.id === state.activeTabId ? { ...t, isDirty: false } : t
+        )
+      }));
+    } catch (error) {
+      console.error("Failed to save request:", error);
+      // Handle error toast here
+    }
+  },
 }));
 
 
@@ -426,5 +450,49 @@ export const MethodStyles: Record<HttpMethod, string> = {
   DELETE: "text-error",
   OPTIONS: "text-text-muted",
   HEAD: "text-text-muted",
-  QUERY: "text-text-muted",
 };
+
+
+
+interface SettingsStore {
+  settings: AppSettings | null;
+  isSettingsOpen: boolean;
+  isLoadingSettings: boolean;
+
+  setSettingsOpen: (isOpen: boolean) => void;
+  fetchSettings: () => Promise<void>;
+  updateSettings: (newSettings: AppSettings) => Promise<void>;
+}
+
+export const useSettingsStore = create<SettingsStore>((set, get) => ({
+  settings: null,
+  isSettingsOpen: false,
+  isLoadingSettings: false,
+
+  setSettingsOpen: (isOpen: boolean) => {
+    set({ isSettingsOpen: isOpen });
+    if (isOpen && !get().settings) {
+      get().fetchSettings();
+    }
+  },
+
+  fetchSettings: async () => {
+    set({ isLoadingSettings: true });
+    try {
+      const settings = await invoke<AppSettings>("get_settings");
+      set({ settings, isLoadingSettings: false });
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+      set({ isLoadingSettings: false });
+    }
+  },
+
+  updateSettings: async (newSettings: AppSettings) => {
+    try {
+      await invoke("update_settings", { settings: newSettings });
+      set({ settings: newSettings, isSettingsOpen: false });
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+    }
+  }
+}));

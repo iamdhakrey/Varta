@@ -1,4 +1,4 @@
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD" | "QUERY";
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD";
 
 export type AuthType = "none" | "basic" | "bearer" | "apiKey";
 
@@ -8,6 +8,18 @@ export type BodyMode =
   | "urlencoded"
   | "raw"
   | "multipart";
+
+
+
+
+export interface AppSettings {
+    followRedirects: boolean;
+    maxRedirects: number;
+    verifySslCertificates: boolean;
+    timeoutMs: number;
+    userAgent: string;
+    proxyUrl: string | null;
+  }
 
 export interface KeyValueRow {
   id: string;

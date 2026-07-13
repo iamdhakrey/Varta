@@ -2,7 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { MethodStyles, useVartaStore } from "../../store";
 import { HttpMethod, RequestTab } from "../../types";
 
-const methods: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
+const methods: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
 
 
 export default function RequestBar({ tab }: { tab: RequestTab }) {

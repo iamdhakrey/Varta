@@ -4,10 +4,10 @@ import {
   Plus,
   Upload,
   Cloud,
+  Settings,
 } from "lucide-react";
 import { environments } from "../../data/mock";
-import { useVartaStore } from "../../store";
-// import { CollectionFolder, HttpMethod } from "../../types";
+import { useVartaStore, useSettingsStore } from "../../store";
 import { WorkspaceSelector } from "./WorkspaceSelector";
 import { CollectionsTree } from "./CollectionTree";
 
@@ -17,6 +17,7 @@ export default function Sidebar() {
   const activeEnvId = useVartaStore((s) => s.activeEnvId);
   const setEnv = useVartaStore((s) => s.setEnv);
   const newTab = useVartaStore((s) => s.newTab);
+  const setSettingsOpen = useSettingsStore((s) => s.setSettingsOpen);
 
   return (
     <aside className="flex h-full w-[280px] shrink-0 flex-col border-r border-border bg-bg">
@@ -73,6 +74,16 @@ export default function Sidebar() {
           Import collection
         </button>
       </div>
+
+      <div className="border-t border-border p-2">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-borderMuted hover:text-text-primary"
+              >
+                <Settings size={16} />
+                Settings
+              </button>
+            </div>
     </aside>
   );
 }

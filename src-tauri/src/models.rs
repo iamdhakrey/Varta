@@ -17,6 +17,10 @@ pub enum HttpMethod {
     Patch,
     #[serde(rename = "DELETE")]
     Delete,
+    #[serde(rename = "OPTIONS")]
+    Options,
+    #[serde(rename = "HEAD")]
+    Head,
 }
 
 impl HttpMethod {
@@ -27,6 +31,8 @@ impl HttpMethod {
             HttpMethod::Put => reqwest::Method::PUT,
             HttpMethod::Patch => reqwest::Method::PATCH,
             HttpMethod::Delete => reqwest::Method::DELETE,
+            HttpMethod::Options => reqwest::Method::OPTIONS,
+            HttpMethod::Head => reqwest::Method::HEAD,
         }
     }
 
@@ -37,6 +43,8 @@ impl HttpMethod {
             HttpMethod::Put => "PUT",
             HttpMethod::Patch => "PATCH",
             HttpMethod::Delete => "DELETE",
+            HttpMethod::Options => "OPTIONS",
+            HttpMethod::Head => "HEAD",
         }
     }
 }

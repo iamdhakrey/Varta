@@ -1,10 +1,13 @@
 import { useEffect } from "react";
-import { useVartaStore } from "../store";
+import { useVartaStore, useSettingsStore } from "../store";
 
 export function useKeyboardShortcuts() {
   const newTab = useVartaStore((s) => s.newTab);
   const sendActiveRequest = useVartaStore((s) => s.sendActiveRequest);
+  const saveActiveRequest = useVartaStore((s) => s.saveActiveRequest);
   const toggleCommandPalette = useVartaStore((s) => s.toggleCommandPalette);
+  const toggleHistory = useVartaStore((s) => s.toggleHistory);
+  const setSettingsOpen = useSettingsStore((s) => s.setSettingsOpen);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -26,12 +29,20 @@ export function useKeyboardShortcuts() {
           break;
         case "s":
           e.preventDefault();
-          // Hook up to a real save-to-collection action.
+          saveActiveRequest();
+          break;
+        case ",":
+          e.preventDefault();
+          setSettingsOpen(true);
+          break;
+        case "h":
+          e.preventDefault();
+          toggleHistory();
           break;
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [newTab, sendActiveRequest, toggleCommandPalette]);
+  }, [newTab, sendActiveRequest, saveActiveRequest, toggleCommandPalette, toggleHistory, setSettingsOpen]);
 }
