@@ -13,8 +13,6 @@ use crate::models::{
 #[cfg(feature = "scripting")]
 use crate::models::PluginHook;
 
-
-
 /// Executes an `ApiRequest` end to end: runs `preRequest` plugin hooks,
 /// interpolates `{{variables}}` from the active environment, applies
 /// user settings (redirects, TLS validation, proxy, timeout) to the HTTP
@@ -447,11 +445,7 @@ fn run_post_response_hooks(
 }
 
 #[cfg(feature = "scripting")]
-fn run_hook_sync(
-    source: String,
-    fn_name: &'static str,
-    ctx: Value,
-) -> AppResult<Value> {
+fn run_hook_sync(source: String, fn_name: &'static str, ctx: Value) -> AppResult<Value> {
     // Run the script on the current thread (plugins are expected to be
     // fast — the timeout guard has been dropped since we're now sync,
     // but the overall send_request is still behind Tauri's async runtime).
