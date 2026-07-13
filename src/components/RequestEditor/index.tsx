@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RequestTab } from "../../types";
 import { useVartaStore } from "../../store";
 import TabStrip from "./TabStrip";
@@ -22,6 +22,20 @@ const SUB_TABS: { id: SubTab; label: string }[] = [
 function RequestPanel({ tab }: { tab: RequestTab }) {
   const [subTab, setSubTab] = useState<SubTab>("params");
   const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
+  const saveActiveRequest = useVartaStore((s) => s.saveActiveRequest);
+
+    // Global Keydown Listener for Save
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault(); // Block browser "Save Page" dialog
+          saveActiveRequest();
+        }
+      };
+
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [saveActiveRequest]);
 
   return (
     <div className="flex h-full flex-col">

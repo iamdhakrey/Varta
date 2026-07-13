@@ -1,7 +1,7 @@
 import React from "react";
 import { ApiRequest, HttpMethod } from "../../types";
 import { Trash2 } from "lucide-react";
-import { useWorkspaceStore } from "../../store";
+import { useWorkspaceStore, useVartaStore } from "../../store"; // Import the store managing tabs
 
 const methodColors: Record<HttpMethod, string> = {
   GET: "text-method-get",
@@ -11,15 +11,20 @@ const methodColors: Record<HttpMethod, string> = {
   DELETE: "text-method-delete",
   OPTIONS: "text-text-muted",
   HEAD: "text-text-muted",
-  QUERY: "text-text-muted",
 };
 
 export const RequestItem: React.FC<{ request: ApiRequest }> = ({ request }) => {
   const { deleteRequest } = useWorkspaceStore();
 
-  return (
-    <div className="group flex items-center justify-between px-2 py-1.5 mx-1 my-0.5 rounded-md text-sm cursor-pointer hover:bg-panel hover:text-text-primary text-text-secondary transition-colors">
+  // Bring in the action to open a tab from your UI/Tabs store
+  const openRequestTab = useVartaStore((s) => s.openRequest);
 
+  return (
+    <div
+      // Trigger the open action when the row is clicked
+      onClick={() => openRequestTab(request)}
+      className="group flex items-center justify-between px-2 py-1.5 mx-1 my-0.5 rounded-md text-sm cursor-pointer hover:bg-panel hover:text-text-primary text-text-secondary transition-colors"
+    >
       <div className="flex items-center gap-2.5 truncate">
         <span className={`text-[10px] font-bold w-10 text-right ${methodColors[request.method as HttpMethod] || "text-text-muted"}`}>
           {request.method}
@@ -31,7 +36,7 @@ export const RequestItem: React.FC<{ request: ApiRequest }> = ({ request }) => {
       <div className="opacity-0 group-hover:opacity-100 flex items-center transition-opacity pr-1">
         <button
           onClick={(e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // Prevents the row click (open tab) from firing when deleting
             deleteRequest(request.id);
           }}
           className="p-1 hover:text-error hover:bg-error/10 rounded transition-colors"
