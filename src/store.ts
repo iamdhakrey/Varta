@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ApiRequest, AppSettings, CollectionTree, HttpMethod, RequestTab } from "./types";
+import { ApiRequest, AppSettings, CollectionTree, EnvironmentVariable, EnvironmentWithVariables, HttpMethod, RequestTab } from "./types";
 import { invoke } from "@tauri-apps/api/core";
 import { WorkspaceStore, Workspace } from "./types";
 import { sendNativeRequest } from "./services/rest";
@@ -11,6 +11,8 @@ interface VartaState {
   isCommandPaletteOpen: boolean;
   isHistoryOpen: boolean;
   activeEnvId: string;
+  isEnvEditorOpen: boolean;
+
 
   openRequest: (request: ApiRequest) => void;
   newTab: () => void;
@@ -22,6 +24,9 @@ interface VartaState {
   toggleCommandPalette: (open?: boolean) => void;
   toggleHistory: (open?: boolean) => void;
   setEnv: (id: string) => void;
+
+  openEnvEditor: () => void;
+  closeEnvEditor: () => void;
 }
 
 let tabCounter = 0;
@@ -47,6 +52,12 @@ export const useVartaStore = create<VartaState>((set, get) => ({
   isCommandPaletteOpen: false,
   isHistoryOpen: false,
   activeEnvId: "env-staging",
+  isEnvEditorOpen: false,
+
+
+  openEnvEditor: () => set({ isEnvEditorOpen: true }),
+
+  closeEnvEditor: () => set({ isEnvEditorOpen: false }),
 
   openRequest: (request) => {
     const existing = get().tabs.find((t) => t.request.id === request.id);
@@ -191,6 +202,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   isLoading: false,
   isLoadingCollections: false,
   error: null,
+  activeEnvironmentId: null,
+  environments: [],
+
+
 
   fetchWorkspaces: async () => {
     set({ isLoading: true, error: null });
@@ -276,9 +291,15 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   getActiveState: async () => {
     try {
-      const invokedActiveId = await invoke<Workspace>("get_active_state");
-      console.log("Invoked active workspace ID:", invokedActiveId.id);
-      set({ activeWorkspaceId: invokedActiveId.id });
+      // Use get_active_state_full to restore both workspace and environment
+      const fullState = await invoke<{ activeWorkspaceId?: string; activeEnvironmentId?: string }>("get_active_state_full");
+      if (fullState.activeWorkspaceId) {
+        set({ activeWorkspaceId: fullState.activeWorkspaceId });
+      }
+      if (fullState.activeEnvironmentId) {
+        set({ activeEnvironmentId: fullState.activeEnvironmentId });
+      }
+      console.log("Restored active state:", fullState);
     } catch (err) {
       set({ error: String(err) });
     }
@@ -439,6 +460,77 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
+
+    fetchEnvironments: async (workspaceid: string) => {
+      set({ isLoading: true });
+      try {
+        const envs = await invoke<EnvironmentWithVariables[]>("list_environments", { workspaceid });
+        set({ environments: envs, isLoading: false });
+        console.log("Fetched environments:", envs);
+      } catch (error) {
+        console.error("Failed to load environments:", error);
+        set({ isLoading: false });
+      }
+    },
+
+    createEnvironment: async (workspaceid: string, name: string) => {
+      try {
+        await invoke("create_environment", { workspaceid, name });
+        await get().fetchEnvironments(workspaceid);
+      } catch (error) {
+        console.error("Failed to create environment:", error);
+      }
+    },
+
+    renameEnvironment: async (environmentid: string, name: string) => {
+      try {
+        await invoke("rename_environment", { environmentid, name });
+        set((state) => ({
+          environments: state.environments.map((env) =>
+            env.environment.id === environmentid
+              ? { ...env, environment: { ...env.environment, name } }
+              : env
+          ),
+        }));
+      } catch (error) {
+        console.error("Failed to rename environment:", error);
+      }
+    },
+
+    deleteEnvironment: async (environmentid: string) => {
+      try {
+        await invoke("delete_environment", { environmentid });
+        set((state) => ({
+          environments: state.environments.filter((env) => env.environment.id !== environmentid),
+          activeEnvironmentId: state.activeEnvironmentId === environmentid ? null : state.activeEnvironmentId,
+        }));
+      } catch (error) {
+        console.error("Failed to delete environment:", error);
+      }
+    },
+
+    saveVariables: async (environmentid: string, variables: EnvironmentVariable[]) => {
+      try {
+        await invoke("replace_variables", { environmentid, variables });
+        set((state) => ({
+          environments: state.environments.map((env) =>
+            env.environment.id === environmentid ? { ...env, variables } : env
+          ),
+        }));
+      } catch (error) {
+        console.error("Failed to save variables:", error);
+      }
+    },
+
+  setActiveEnvironment: async (id: string | null) => {
+    set({ activeEnvironmentId: id });
+    try {
+      await invoke("set_active_environment", { environmentid: id ?? null });
+    } catch (error) {
+      console.error("Failed to persist active environment:", error);
+    }
+  },
+
 }));
 
 
@@ -471,7 +563,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setSettingsOpen: (isOpen: boolean) => {
     set({ isSettingsOpen: isOpen });
-    if (isOpen && !get().settings) {
+    // Always re-fetch from disk when opening so we see the latest persisted values
+    if (isOpen) {
       get().fetchSettings();
     }
   },

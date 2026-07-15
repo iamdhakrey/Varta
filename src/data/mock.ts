@@ -1,12 +1,12 @@
-import {  Environment, HistoryEntry } from "../types";
+import { HistoryEntry } from "../types";
 
 
 
-export const environments: Environment[] = [
-  { id: "env-local", name: "Local" },
-  { id: "env-staging", name: "Staging" },
-  { id: "env-prod", name: "Production" },
-];
+// export const environments: Environment[] = [
+//   { id: "env-local", name: "Local" },
+//   { id: "env-staging", name: "Staging" },
+//   { id: "env-prod", name: "Production" },
+// ];
 
 export const historyEntries: HistoryEntry[] = [
   {

@@ -7,6 +7,7 @@ import { useVartaStore } from "./store";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useResizablePanel } from "./hooks/useResizablePanel";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { EnvironmentModal } from "./components/EnvironmentModal"; // Ensure you import the Modal, not the raw Editor
 
 export default function App() {
   useKeyboardShortcuts();
@@ -45,9 +46,13 @@ export default function App() {
         )}
       </div>
 
+      {/* Global Overlays & Modals */}
       <HistoryDrawer />
       <CommandPalette />
       <SettingsPanel />
+
+      {/* Mount the Environment Modal here */}
+      <EnvironmentModal />
     </div>
   );
 }
