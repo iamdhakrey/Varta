@@ -64,11 +64,7 @@ export interface ApiRequestBody {
   // Extend this if you have text fields or JSON payloads
 }
 
-export interface KeyValueRow {
-  key: string;
-  value: string;
-  enabled: boolean; // Add or remove fields based on your exact Rust definition
-}
+// (KeyValueRow is defined above — this duplicate is removed)
 
 export interface CookieRow {
   id: string;
@@ -170,10 +166,38 @@ export interface CollectionTree {
 }
 
 
+export interface EnvironmentVariable {
+  id: string;
+  environmentid: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+  isSecret: boolean;
+  sortOrder?: number;
+}
+
+export interface Environment {
+  id: string;
+  name: string;
+  workspaceId: string;
+  sortOrder: number;
+}
+
+/**
+ * Matches the Rust serialization of `EnvironmentWithVariables`:
+ * { environment: { id, workspaceId, name, sortOrder }, variables: [...] }
+ */
+export interface EnvironmentWithVariables {
+  environment: Environment;
+  variables: EnvironmentVariable[];
+}
+
 export interface WorkspaceStore {
+  environments: EnvironmentWithVariables[];
   workspaces: Workspace[];
   collectionTrees: CollectionTree[],
   activeWorkspaceId: string | null;
+  activeEnvironmentId: string | null;
   isLoading: boolean;
   isLoadingCollections: boolean;
   error: string | null;
@@ -204,4 +228,12 @@ export interface WorkspaceStore {
   createRequest: (collectionId: string, folderId: string | null, name: string) => Promise<void>;
   // updateRequest: (requestId: string, updatedRequest: Partial<ApiRequest>) => Promise<void>;
   deleteRequest: (requestId: string) => Promise<void>;
+
+
+  fetchEnvironments: (workspaceid: string) => Promise<void>;
+    createEnvironment: (workspaceid: string, name: string) => Promise<void>;
+    renameEnvironment: (environmentid: string, name: string) => Promise<void>;
+    deleteEnvironment: (environmentid: string) => Promise<void>;
+    saveVariables: (environmentid: string, variables: EnvironmentVariable[]) => Promise<void>;
+    setActiveEnvironment: (id: string | null) => Promise<void>;
 }

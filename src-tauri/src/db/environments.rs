@@ -41,8 +41,7 @@ fn find_environment_workspace(dd: &DataDir, environment_id: &str) -> AppResult<S
             let ws_id = entry.file_name().to_string_lossy().to_string();
             let envs_path = dd.environments_path(&ws_id);
             if envs_path.exists() {
-                let envs: Vec<EnvironmentWithVariables> =
-                    read_yaml_vec(&envs_path)?;
+                let envs: Vec<EnvironmentWithVariables> = read_yaml_vec(&envs_path)?;
                 if envs.iter().any(|e| e.environment.id == environment_id) {
                     return Ok(ws_id);
                 }
@@ -54,11 +53,7 @@ fn find_environment_workspace(dd: &DataDir, environment_id: &str) -> AppResult<S
     )))
 }
 
-pub fn create_environment(
-    dd: &DataDir,
-    workspace_id: &str,
-    name: &str,
-) -> AppResult<Environment> {
+pub fn create_environment(dd: &DataDir, workspace_id: &str, name: &str) -> AppResult<Environment> {
     let environment = Environment {
         id: new_id(),
         workspace_id: workspace_id.to_string(),
@@ -117,7 +112,7 @@ pub fn replace_variables(
                 if var.id.is_empty() {
                     var.id = new_id();
                 }
-                var.environment_id = environment_id.to_string();
+                var.environmentid = environment_id.to_string();
                 var
             })
             .collect();

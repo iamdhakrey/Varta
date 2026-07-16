@@ -5,10 +5,14 @@ use crate::commands::collections::{
     delete_folder, delete_request, duplicate_request, get_collection_trees, get_request,
     rename_collection, rename_folder, rename_request, save_request,
 };
+use crate::commands::environments::{
+    create_environment, delete_environment, list_environments, list_variables, rename_environment,
+    replace_variables, set_active_environment,
+};
 use crate::commands::settings::{get_settings, update_settings};
 use crate::commands::workspaces::{
-    create_workspace, delete_workspace, get_active_state, list_workspaces, rename_workspace,
-    set_active_workspace,
+    create_workspace, delete_workspace, get_active_state, get_active_state_full, list_workspaces,
+    rename_workspace, set_active_workspace,
 };
 use crate::http::send_request;
 use crate::state::AppState;
@@ -54,6 +58,7 @@ pub fn run() {
             delete_workspace,
             set_active_workspace,
             get_active_state,
+            get_active_state_full,
             //  Collection commands
             get_collection_trees,
             create_collection,
@@ -74,6 +79,14 @@ pub fn run() {
             // Settings
             get_settings,
             update_settings,
+            // Environment commands
+            create_environment,
+            rename_environment,
+            delete_environment,
+            list_environments,
+            list_variables,
+            replace_variables,
+            set_active_environment,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

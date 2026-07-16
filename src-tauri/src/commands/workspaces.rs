@@ -1,4 +1,4 @@
-use crate::{db, error::AppResult, models::Workspace, state::AppState};
+use crate::{db, error::AppResult, models::{ActiveState, Workspace}, state::AppState};
 use tauri::State;
 
 #[tauri::command]
@@ -30,6 +30,7 @@ pub async fn set_active_workspace(state: State<'_, AppState>, id: String) -> App
     db::app_state::set_active_workspace(&state.data_dir, &id)
 }
 
+/// Returns the active workspace object (for the sidebar workspace selector).
 #[tauri::command]
 pub async fn get_active_state(state: State<'_, AppState>) -> AppResult<Option<Workspace>> {
     db::app_state::get_active_state(&state.data_dir).and_then(|active_state| {
@@ -41,4 +42,11 @@ pub async fn get_active_state(state: State<'_, AppState>) -> AppResult<Option<Wo
             Ok(None)
         }
     })
+}
+
+/// Returns the full persisted active state (workspace + environment + theme IDs).
+/// Use this on app startup to restore the user's previous selections.
+#[tauri::command]
+pub async fn get_active_state_full(state: State<'_, AppState>) -> AppResult<ActiveState> {
+    db::app_state::get_active_state(&state.data_dir)
 }

@@ -232,7 +232,7 @@ pub struct FolderNode {
 #[serde(rename_all = "camelCase")]
 pub struct EnvironmentVariable {
     pub id: String,
-    pub environment_id: String,
+    pub environmentid: String,
     pub key: String,
     pub value: String,
     pub enabled: bool,
