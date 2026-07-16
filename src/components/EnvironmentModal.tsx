@@ -26,20 +26,12 @@ export const EnvironmentModal: React.FC = () => {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-      onMouseDown={closeEnvEditor} // Close when clicking the backdrop
+      onMouseDown={closeEnvEditor}
     >
-      {/* Modal Container: Large enough to handle the dual-pane layout */}
       <div
         className="relative flex h-[85vh] w-[90vw] max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-bg shadow-elevated animate-in zoom-in-95 duration-200"
-        onMouseDown={(e) => e.stopPropagation()} // Prevent backdrop click from bubbling
+        onMouseDown={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={closeEnvEditor}
-          className="absolute right-4 top-3 z-10 rounded-md p-1.5 text-text-muted hover:bg-panel hover:text-text-primary transition-colors cursor-pointer"
-        >
-          <X size={18} />
-        </button>
-
         {activeWorkspaceId ? (
           <EnvironmentEditor activeWorkspaceId={activeWorkspaceId} />
         ) : (

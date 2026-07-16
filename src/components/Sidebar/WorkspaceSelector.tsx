@@ -8,7 +8,7 @@ import {
   Edit2,
   Trash2,
   X,
-  Loader2
+  Loader2,
 } from "lucide-react";
 
 export const WorkspaceSelector: React.FC = () => {
@@ -37,7 +37,10 @@ export const WorkspaceSelector: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
         setIsCreating(false);
         setEditingId(null);
@@ -47,8 +50,7 @@ export const WorkspaceSelector: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-
- // Fetch the active workspace state from the backend when the component mounts
+  // Fetch the active workspace state from the backend when the component mounts
   useEffect(() => {
     getActiveState();
   }, [getActiveState]);
@@ -63,8 +65,6 @@ export const WorkspaceSelector: React.FC = () => {
       setIsCreating(false);
     }
   };
-
-
 
   const handleRename = async (e: React.FormEvent, id: string) => {
     e.preventDefault();
@@ -87,15 +87,18 @@ export const WorkspaceSelector: React.FC = () => {
           <span className="truncate">
             {activeWorkspace ? activeWorkspace.name : "Select Workspace..."}
           </span>
-          {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-text-muted" />}
+          {isLoading && (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-text-muted" />
+          )}
         </div>
-        <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`w-4 h-4 text-text-secondary transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {/* Dropdown Menu Overlay */}
       {isOpen && (
         <div className="absolute left-3 right-3 mt-1.5 z-50 rounded-lg bg-panel-raised border border-border shadow-elevated overflow-hidden animate-in fade-in duration-100">
-
           {/* Scrollable Workspaces List */}
           <div className="max-h-60 overflow-y-auto py-1">
             {workspaces.length === 0 ? (
@@ -107,7 +110,9 @@ export const WorkspaceSelector: React.FC = () => {
                 <div
                   key={workspace.id}
                   className={`group flex items-center justify-between px-3 py-1.5 mx-1 my-0.5 rounded-md text-sm text-text-secondary hover:bg-panel hover:text-text-primary transition-all duration-150 ${
-                    workspace.id === activeWorkspaceId ? "bg-panel/40 text-text-primary" : ""
+                    workspace.id === activeWorkspaceId
+                      ? "bg-panel/40 text-text-primary"
+                      : ""
                   }`}
                 >
                   {editingId === workspace.id ? (
@@ -123,7 +128,10 @@ export const WorkspaceSelector: React.FC = () => {
                         onChange={(e) => setInputValue(e.target.value)}
                         className="input-shell w-full py-0.5 px-2 text-xs"
                       />
-                      <button type="submit" className="p-1 hover:text-success cursor-pointer">
+                      <button
+                        type="submit"
+                        className="p-1 hover:text-success cursor-pointer"
+                      >
                         <Check className="w-3.5 h-3.5" />
                       </button>
                       <button
@@ -182,7 +190,10 @@ export const WorkspaceSelector: React.FC = () => {
           <div className="border-t border-borderMuted bg-panel/30 p-1.5">
             {isCreating ? (
               // Inline Workspace Creation Form
-              <form onSubmit={handleCreate} className="flex items-center gap-1.5">
+              <form
+                onSubmit={handleCreate}
+                className="flex items-center gap-1.5"
+              >
                 <input
                   type="text"
                   autoFocus
@@ -191,7 +202,10 @@ export const WorkspaceSelector: React.FC = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   className="input-shell w-full py-1 text-xs"
                 />
-                <button type="submit" className="p-1.5 bg-primary hover:bg-primary-hover text-white rounded-md cursor-pointer transition-colors">
+                <button
+                  type="submit"
+                  className="p-1.5 bg-primary hover:bg-primary-hover text-white rounded-md cursor-pointer transition-colors"
+                >
                   <Check className="w-3.5 h-3.5" />
                 </button>
                 <button

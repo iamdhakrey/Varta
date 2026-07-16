@@ -1,5 +1,5 @@
 import { Plus, X, Save, Copy, History, Settings } from "lucide-react";
-import { MethodStyles, useVartaStore } from "../../store";
+import { MethodStyles, useSettingsStore, useVartaStore } from "../../store";
 import { HttpMethod } from "../../types";
 
 // const methodColor: Record<HttpMethod, string> = {
@@ -17,6 +17,7 @@ export default function TabStrip() {
   const closeTab = useVartaStore((s) => s.closeTab);
   const newTab = useVartaStore((s) => s.newTab);
   const toggleHistory = useVartaStore((s) => s.toggleHistory);
+  const setSettingsOpen = useSettingsStore((s) => s.setSettingsOpen);
 
   return (
     <div className="flex items-center justify-between border-b border-border bg-panel pr-2">
@@ -83,6 +84,7 @@ export default function TabStrip() {
           <History size={15} />
         </button>
         <button
+          onClick={() => setSettingsOpen(true)}
           className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary"
           aria-label="Settings"
         >

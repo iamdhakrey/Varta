@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
+import { Search, Plus, Upload, Settings, Globe } from "lucide-react";
 import {
-  Search,
-  Plus,
-  Upload,
-  Settings,
-  Globe,
-} from "lucide-react";
-import { useVartaStore, useSettingsStore, useWorkspaceStore } from "../../store";
+  useVartaStore,
+  useSettingsStore,
+  useWorkspaceStore,
+} from "../../store";
 import { WorkspaceSelector } from "./WorkspaceSelector";
 import { CollectionsTree } from "./CollectionTree";
 import { EnvironmentSelector } from "./EnvironmentSelector";
@@ -17,7 +15,6 @@ export default function Sidebar() {
   const fetchEnvironments = useWorkspaceStore((s) => s.fetchEnvironments);
 
   const newTab = useVartaStore((s) => s.newTab);
-  const openEnvEditor = useVartaStore((s) => s.openEnvEditor);
   const setSettingsOpen = useSettingsStore((s) => s.setSettingsOpen);
 
   // Fetch environments when the active workspace changes
@@ -54,7 +51,6 @@ export default function Sidebar() {
 
       {/* Environment + actions */}
       <div className="border-t border-border p-3">
-
         {/* <-- Custom Dropdown replaces native select --> */}
         <EnvironmentSelector />
 
@@ -73,15 +69,6 @@ export default function Sidebar() {
 
       {/* FOOTER - Stacked Buttons */}
       <div className="flex flex-col gap-1 border-t border-border p-2">
-
-        <button
-          onClick={openEnvEditor}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-borderMuted hover:text-text-primary"
-        >
-          <Globe size={16} />
-          Environments
-        </button>
-
         <button
           onClick={() => setSettingsOpen(true)}
           className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-borderMuted hover:text-text-primary"
@@ -89,7 +76,6 @@ export default function Sidebar() {
           <Settings size={16} />
           Settings
         </button>
-
       </div>
     </aside>
   );
