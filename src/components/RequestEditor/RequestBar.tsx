@@ -250,16 +250,6 @@ export default function RequestBar({ tab }: { tab: RequestTab }) {
         />
       </div>
 
-      {/*<input
-        value={tab.request.url}
-        onChange={(e) => updateActiveRequest({ url: e.target.value })}
-        placeholder="https://api.example.com/users"
-        className="input-shell flex-1 font-mono"
-        onKeyDown={(e) => {
-          if (e.key === "Enter") sendActiveRequest();
-        }}
-      />*/}
-
       <UrlAutocompleteInput
         url={tab.request.url}
         onChange={(url) => updateActiveRequest({ url })}
