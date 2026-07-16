@@ -77,7 +77,7 @@ export const EnvironmentEditor: React.FC<{ activeWorkspaceId: string }> = ({ act
   const addVarRow = () => {
     setLocalVariables([
       ...localVariables,
-      { id: crypto.randomUUID(), key: "", value: "", enabled: true, isSecret: false }
+      { id: crypto.randomUUID(), environmentid: activeEnv?.environment.id || "", key: "", value: "", enabled: true, isSecret: false }
     ]);
   };
 

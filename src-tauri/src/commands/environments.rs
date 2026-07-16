@@ -64,8 +64,5 @@ pub async fn set_active_environment(
     state: State<'_, AppState>,
     environmentid: Option<String>,
 ) -> crate::error::AppResult<()> {
-    crate::db::app_state::set_active_environment(
-        &state.data_dir,
-        environmentid.as_deref(),
-    )
+    crate::db::app_state::set_active_environment(&state.data_dir, environmentid.as_deref())
 }

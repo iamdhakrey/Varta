@@ -509,9 +509,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       }
     },
 
-    saveVariables: async (environmentid: string, variables: EnvironmentVariable[]) => {
-      try {
-        await invoke("replace_variables", { environmentid, variables });
+  saveVariables: async (environmentid: string, variables: EnvironmentVariable[]) => {
+    try {
+      console.log("Saving variables for environment:", environmentid, "variables:", variables);
+        await invoke("replace_variables", { environmentid: environmentid, variables });
         set((state) => ({
           environments: state.environments.map((env) =>
             env.environment.id === environmentid ? { ...env, variables } : env

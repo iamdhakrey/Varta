@@ -168,6 +168,7 @@ export interface CollectionTree {
 
 export interface EnvironmentVariable {
   id: string;
+  environmentid: string;
   key: string;
   value: string;
   enabled: boolean;
