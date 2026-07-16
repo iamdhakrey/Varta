@@ -9,7 +9,6 @@ import {
   Folder,
   Edit,
 } from "lucide-react";
-import { IconMenuItem } from "@tauri-apps/api/menu";
 
 export const EnvironmentSelector: React.FC = () => {
   const {
@@ -20,11 +19,7 @@ export const EnvironmentSelector: React.FC = () => {
   } = useWorkspaceStore();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const closeEnvEditor = useVartaStore((s) => s.closeEnvEditor);
-  const isEnvEditorOpen = useVartaStore((s) => s.isEnvEditorOpen);
-  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (

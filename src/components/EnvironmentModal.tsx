@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { useVartaStore, useWorkspaceStore } from "../store"; // Adjust imports to match your store locations
 import { EnvironmentEditor } from "./EnvironmentEditor";
-import { X } from "lucide-react";
 
 export const EnvironmentModal: React.FC = () => {
   const isEnvEditorOpen = useVartaStore((s) => s.isEnvEditorOpen);

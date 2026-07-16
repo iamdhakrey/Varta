@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, Upload, Settings, Globe } from "lucide-react";
+import { Search, Plus, Upload, Settings } from "lucide-react";
 import {
   useVartaStore,
   useSettingsStore,
