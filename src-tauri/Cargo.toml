@@ -1,6 +1,6 @@
 [package]
 name = "varta"
-version = "0.1.2"
+version = "0.1.3"
 description = "A Tauri App"
 authors = ["Hrithik Dhakrey <dhakreyhrithik@gmail.com>"]
 edition = "2021"
