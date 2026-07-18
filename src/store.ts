@@ -135,7 +135,7 @@ export const useVartaStore = create<VartaState>((set, get) => ({
         set((s) => ({
           tabs: s.tabs.map((t) =>
             t.id === activeTabId
-              ? { ...t, isSending: false, response: res }
+              ? { ...t, isSending: false, response: res, error: undefined }
               : t,
           ),
         }));
@@ -313,7 +313,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
     try {
       const collections = await invoke<CollectionTree[]>("get_collection_trees", {
-           workspaceid: activeWorkspaceId,
+        workspaceid: activeWorkspaceId,
       });
       console.log("Fetched collections:", collections);
       if (!collections) {
@@ -461,67 +461,67 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
 
-    fetchEnvironments: async (workspaceid: string) => {
-      set({ isLoading: true });
-      try {
-        const envs = await invoke<EnvironmentWithVariables[]>("list_environments", { workspaceid });
-        set({ environments: envs, isLoading: false });
-        console.log("Fetched environments:", envs);
-      } catch (error) {
-        console.error("Failed to load environments:", error);
-        set({ isLoading: false });
-      }
-    },
+  fetchEnvironments: async (workspaceid: string) => {
+    set({ isLoading: true });
+    try {
+      const envs = await invoke<EnvironmentWithVariables[]>("list_environments", { workspaceid });
+      set({ environments: envs, isLoading: false });
+      console.log("Fetched environments:", envs);
+    } catch (error) {
+      console.error("Failed to load environments:", error);
+      set({ isLoading: false });
+    }
+  },
 
-    createEnvironment: async (workspaceid: string, name: string) => {
-      try {
-        await invoke("create_environment", { workspaceid, name });
-        await get().fetchEnvironments(workspaceid);
-      } catch (error) {
-        console.error("Failed to create environment:", error);
-      }
-    },
+  createEnvironment: async (workspaceid: string, name: string) => {
+    try {
+      await invoke("create_environment", { workspaceid, name });
+      await get().fetchEnvironments(workspaceid);
+    } catch (error) {
+      console.error("Failed to create environment:", error);
+    }
+  },
 
-    renameEnvironment: async (environmentid: string, name: string) => {
-      try {
-        await invoke("rename_environment", { environmentid, name });
-        set((state) => ({
-          environments: state.environments.map((env) =>
-            env.environment.id === environmentid
-              ? { ...env, environment: { ...env.environment, name } }
-              : env
-          ),
-        }));
-      } catch (error) {
-        console.error("Failed to rename environment:", error);
-      }
-    },
+  renameEnvironment: async (environmentid: string, name: string) => {
+    try {
+      await invoke("rename_environment", { environmentid, name });
+      set((state) => ({
+        environments: state.environments.map((env) =>
+          env.environment.id === environmentid
+            ? { ...env, environment: { ...env.environment, name } }
+            : env
+        ),
+      }));
+    } catch (error) {
+      console.error("Failed to rename environment:", error);
+    }
+  },
 
-    deleteEnvironment: async (environmentid: string) => {
-      try {
-        await invoke("delete_environment", { environmentid });
-        set((state) => ({
-          environments: state.environments.filter((env) => env.environment.id !== environmentid),
-          activeEnvironmentId: state.activeEnvironmentId === environmentid ? null : state.activeEnvironmentId,
-        }));
-      } catch (error) {
-        console.error("Failed to delete environment:", error);
-      }
-    },
+  deleteEnvironment: async (environmentid: string) => {
+    try {
+      await invoke("delete_environment", { environmentid });
+      set((state) => ({
+        environments: state.environments.filter((env) => env.environment.id !== environmentid),
+        activeEnvironmentId: state.activeEnvironmentId === environmentid ? null : state.activeEnvironmentId,
+      }));
+    } catch (error) {
+      console.error("Failed to delete environment:", error);
+    }
+  },
 
   saveVariables: async (environmentid: string, variables: EnvironmentVariable[]) => {
     try {
       console.log("Saving variables for environment:", environmentid, "variables:", variables);
-        await invoke("replace_variables", { environmentid: environmentid, variables });
-        set((state) => ({
-          environments: state.environments.map((env) =>
-            env.environment.id === environmentid ? { ...env, variables } : env
-          ),
-        }));
-      } catch (error) {
-        console.error("Failed to save variables:", error);
-      }
-    },
+      await invoke("replace_variables", { environmentid: environmentid, variables });
+      set((state) => ({
+        environments: state.environments.map((env) =>
+          env.environment.id === environmentid ? { ...env, variables } : env
+        ),
+      }));
+    } catch (error) {
+      console.error("Failed to save variables:", error);
+    }
+  },
 
   setActiveEnvironment: async (id: string | null) => {
     set({ activeEnvironmentId: id });
