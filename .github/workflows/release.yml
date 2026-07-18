@@ -20,7 +20,7 @@ jobs:
     outputs:
       tag: ${{ steps.extract.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main # Checkout main branch after merge
           fetch-depth: 0
