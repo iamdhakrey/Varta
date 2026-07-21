@@ -141,7 +141,7 @@ const UrlAutocompleteInput: React.FC<UrlInputProps> = ({
   // 4. Render Highlighted Text
   const renderUrl = () => {
     // Split by complete {{...}} blocks to colorize them
-    const parts = url.split(/(\{\{[^}]*\}\})/g);
+    const parts = url.split(/(\\{\\{[^}]*\\}\\})/g);
 
     return parts.map((part, i) => {
       if (part.startsWith("{{") && part.endsWith("}}")) {
@@ -224,10 +224,61 @@ const UrlAutocompleteInput: React.FC<UrlInputProps> = ({
   );
 };
 
-export default function RequestBar({ tab }: { tab: RequestTab }) {
+interface RequestBarProps {
+  tab: RequestTab;
+  isMobile?: boolean;
+}
+
+export default function RequestBar({ tab, isMobile }: RequestBarProps) {
   const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
   const sendActiveRequest = useVartaStore((s) => s.sendActiveRequest);
 
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-2 px-3 py-2.5">
+        {/* Row 1: Method select + Send button */}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <select
+              value={tab.request.method}
+              onChange={(e) =>
+                updateActiveRequest({ method: e.target.value as HttpMethod })
+              }
+              className={`input-shell appearance-none pr-7 font-semibold ${MethodStyles[tab.request.method as HttpMethod]}`}
+            >
+              {methods.map((m) => (
+                <option key={m} value={m} className="bg-panel text-text-primary">
+                  {m}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={13}
+              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
+            />
+          </div>
+
+          <button
+            onClick={sendActiveRequest}
+            disabled={tab.isSending}
+            className="rounded-md bg-brand-gradient px-5 py-1.5 text-sm font-medium text-white shadow-panel hover:opacity-90 disabled:opacity-60 transition-opacity"
+          >
+            {tab.isSending ? "Sending…" : "Send"}
+          </button>
+        </div>
+
+        {/* Row 2: URL input (full width) */}
+        <UrlAutocompleteInput
+          url={tab.request.url}
+          onChange={(url) => updateActiveRequest({ url })}
+          onEnter={sendActiveRequest}
+          disabled={tab.isSending}
+        />
+      </div>
+    );
+  }
+
+  // Desktop layout — unchanged
   return (
     <div className="flex items-center gap-2 px-4 py-3">
       <div className="relative">

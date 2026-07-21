@@ -21,9 +21,10 @@ function formatBytes(bytes: number) {
 interface Props {
   body: RequestBody;
   onChange: (body: RequestBody) => void;
+  isMobile?: boolean;
 }
 
-export default function BodyTab({ body, onChange }: Props) {
+export default function BodyTab({ body, onChange, isMobile = false }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function setMode(mode: BodyMode) {
@@ -51,14 +52,15 @@ export default function BodyTab({ body, onChange }: Props) {
   }
 
   return (
-    <div className="flex h-full flex-col px-4 py-3">
+    <div className={`flex h-full flex-col ${isMobile ? "px-3 py-2.5" : "px-4 py-3"}`}>
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex gap-1">
+        {/* Mode selector — scrollable on mobile */}
+        <div className={`flex gap-1 ${isMobile ? "overflow-x-auto scrollbar-hide" : ""}`}>
           {MODES.map((m) => (
             <button
               key={m.id}
               onClick={() => setMode(m.id)}
-              className={`rounded-md px-2.5 py-1 text-sm ${
+              className={`shrink-0 rounded-md px-2.5 py-1 text-sm ${
                 body.mode === m.id
                   ? "bg-panel-raised text-text-primary"
                   : "text-text-secondary hover:bg-panel-raised"
@@ -71,10 +73,10 @@ export default function BodyTab({ body, onChange }: Props) {
         {body.mode === "json" && (
           <button
             onClick={formatJson}
-            className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-text-secondary hover:bg-panel-raised"
+            className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-text-secondary hover:bg-panel-raised ml-2"
           >
             <Wand2 size={12} />
-            Format JSON
+            {isMobile ? "Format" : "Format JSON"}
           </button>
         )}
       </div>
@@ -88,10 +90,11 @@ export default function BodyTab({ body, onChange }: Props) {
             value={body.raw}
             onChange={(v) => onChange({ ...body, raw: v ?? "" })}
             options={{
-              fontSize: 13,
+              fontSize: isMobile ? 12 : 13,
               minimap: { enabled: false },
               scrollBeyondLastLine: false,
               padding: { top: 12 },
+              wordWrap: isMobile ? "on" : "off",
             }}
           />
         </div>
@@ -110,6 +113,7 @@ export default function BodyTab({ body, onChange }: Props) {
         <KeyValueTable
           rows={body.formData ?? []}
           onChange={(rows) => onChange({ ...body, formData: rows })}
+          isMobile={isMobile}
         />
       )}
 
@@ -117,6 +121,7 @@ export default function BodyTab({ body, onChange }: Props) {
         <KeyValueTable
           rows={body.urlEncoded ?? []}
           onChange={(rows) => onChange({ ...body, urlEncoded: rows })}
+          isMobile={isMobile}
         />
       )}
 
@@ -129,11 +134,13 @@ export default function BodyTab({ body, onChange }: Props) {
               addFiles(e.dataTransfer.files);
             }}
             onClick={() => fileInputRef.current?.click()}
-            className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-10 text-center hover:border-primary/60"
+            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border text-center hover:border-primary/60 ${
+              isMobile ? "py-6" : "py-10"
+            }`}
           >
             <Upload size={20} className="text-text-secondary" />
             <p className="text-sm text-text-secondary">
-              Drag and drop files, or click to browse
+              {isMobile ? "Tap to browse files" : "Drag and drop files, or click to browse"}
             </p>
             <input
               ref={fileInputRef}

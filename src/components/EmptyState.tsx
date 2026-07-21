@@ -1,13 +1,26 @@
 import { Plus, Upload } from "lucide-react";
 import { useVartaStore } from "../store";
 
-export default function EmptyState() {
+interface EmptyStateProps {
+  isMobile?: boolean;
+}
+
+export default function EmptyState({ isMobile = false }: EmptyStateProps) {
   const newTab = useVartaStore((s) => s.newTab);
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-gradient">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+    <div className="flex h-full flex-col items-center justify-center gap-4 text-center px-4">
+      <div
+        className={`flex items-center justify-center rounded-2xl bg-brand-gradient ${
+          isMobile ? "h-12 w-12" : "h-16 w-16"
+        }`}
+      >
+        <svg
+          width={isMobile ? "24" : "32"}
+          height={isMobile ? "24" : "32"}
+          viewBox="0 0 24 24"
+          fill="none"
+        >
           <path d="M4 4h16v11H9l-5 5V4z" fill="white" />
           <circle cx="9" cy="9" r="1.3" fill="#3B82F6" />
           <circle cx="14" cy="9" r="1.3" fill="#3B82F6" />
@@ -16,16 +29,24 @@ export default function EmptyState() {
           <line x1="14" y1="9" x2="14" y2="13" stroke="#3B82F6" strokeWidth="0.8" />
         </svg>
       </div>
-      <p className="text-sm text-text-secondary">Start a conversation with your API</p>
-      <div className="flex gap-2">
+      <p className={`text-text-secondary ${isMobile ? "text-xs" : "text-sm"}`}>
+        Start a conversation with your API
+      </p>
+      <div className={`flex gap-2 ${isMobile ? "flex-col w-full max-w-[260px]" : ""}`}>
         <button
           onClick={newTab}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
+          className={`flex items-center justify-center gap-1.5 rounded-md bg-primary text-sm font-medium text-white hover:bg-primary-hover ${
+            isMobile ? "w-full px-4 py-2.5" : "px-4 py-2"
+          }`}
         >
           <Plus size={14} />
           Create request
         </button>
-        <button className="flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-sm text-text-secondary hover:bg-panel-raised">
+        <button
+          className={`flex items-center justify-center gap-1.5 rounded-md border border-border text-sm text-text-secondary hover:bg-panel-raised ${
+            isMobile ? "w-full px-4 py-2.5" : "px-4 py-2"
+          }`}
+        >
           <Upload size={14} />
           Import collection
         </button>
