@@ -10,17 +10,25 @@ const AUTH_TYPES: { id: AuthType; label: string }[] = [
 interface Props {
   auth: AuthConfig;
   onChange: (auth: AuthConfig) => void;
+  isMobile?: boolean;
 }
 
-export default function AuthTab({ auth, onChange }: Props) {
+export default function AuthTab({ auth, onChange, isMobile = false }: Props) {
   return (
-    <div className="flex gap-6 px-4 py-4">
-      <div className="w-44 shrink-0">
+    <div
+      className={`${
+        isMobile ? "flex flex-col gap-4 px-3 py-3" : "flex gap-6 px-4 py-4"
+      }`}
+    >
+      {/* Auth type selector */}
+      <div className={isMobile ? "flex gap-1 overflow-x-auto scrollbar-hide" : "w-44 shrink-0"}>
         {AUTH_TYPES.map((t) => (
           <button
             key={t.id}
             onClick={() => onChange({ ...auth, type: t.id })}
-            className={`block w-full rounded-md px-2.5 py-1.5 text-left text-sm ${
+            className={`${
+              isMobile ? "shrink-0 rounded-md px-3 py-1.5" : "block w-full rounded-md px-2.5 py-1.5"
+            } text-left text-sm ${
               auth.type === t.id
                 ? "bg-panel-raised text-text-primary"
                 : "text-text-secondary hover:bg-panel-raised"
@@ -31,13 +39,14 @@ export default function AuthTab({ auth, onChange }: Props) {
         ))}
       </div>
 
+      {/* Auth form */}
       <div className="flex-1">
         {auth.type === "none" && (
           <p className="text-sm text-text-muted">This request does not use authorization.</p>
         )}
 
         {auth.type === "basic" && (
-          <div className="flex max-w-sm flex-col gap-3">
+          <div className={`flex flex-col gap-3 ${isMobile ? "" : "max-w-sm"}`}>
             <Field
               label="Username"
               value={auth.basic?.username ?? ""}
@@ -53,7 +62,7 @@ export default function AuthTab({ auth, onChange }: Props) {
         )}
 
         {auth.type === "bearer" && (
-          <div className="max-w-sm">
+          <div className={isMobile ? "" : "max-w-sm"}>
             <Field
               label="Token"
               value={auth.bearer?.token ?? ""}
@@ -64,7 +73,7 @@ export default function AuthTab({ auth, onChange }: Props) {
         )}
 
         {auth.type === "apiKey" && (
-          <div className="flex max-w-sm flex-col gap-3">
+          <div className={`flex flex-col gap-3 ${isMobile ? "" : "max-w-sm"}`}>
             <Field
               label="Key"
               value={auth.apiKey?.key ?? ""}

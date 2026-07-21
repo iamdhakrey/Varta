@@ -22,15 +22,19 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
+interface ResponsePanelProps {
+  response?: ApiResponse;
+  isSending: boolean;
+  error?: string;
+  isMobile?: boolean;
+}
+
 export default function ResponsePanel({
   response,
   isSending,
-  error, // 1. Added error destructuring here
-}: {
-  response?: ApiResponse;
-  isSending: boolean;
-  error?: string; // Correctly typed in props
-}) {
+  error,
+  isMobile = false,
+}: ResponsePanelProps) {
   const [tab, setTab] = useState<RespTab>("body");
   const [pretty, setPretty] = useState(true);
 
@@ -82,7 +86,13 @@ export default function ResponsePanel({
   return (
     <div className="flex h-full flex-col">
       {/* Metrics bar */}
-      <div className="flex items-center gap-4 border-b border-border bg-panel px-4 py-2 text-sm">
+      <div
+        className={`flex items-center gap-4 border-b border-border bg-panel text-sm ${
+          isMobile
+            ? "flex-wrap gap-2 px-3 py-2"
+            : "px-4 py-2"
+        }`}
+      >
         <span className={`font-semibold ${statusColor(response.status)}`}>
           {response.status} {response.statusText}
         </span>
@@ -91,7 +101,7 @@ export default function ResponsePanel({
           Size: {formatBytes(response.sizeBytes)}
         </span>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${isMobile ? "" : "ml-auto"}`}>
           {tab === "body" && (
             <button
               onClick={() => setPretty((p) => !p)}
@@ -117,13 +127,17 @@ export default function ResponsePanel({
         </div>
       </div>
 
-      {/* Sub tabs */}
-      <div className="flex gap-1 border-b border-border px-4">
+      {/* Sub tabs — scrollable on mobile */}
+      <div
+        className={`flex gap-1 border-b border-border ${
+          isMobile ? "overflow-x-auto scrollbar-hide px-2" : "px-4"
+        }`}
+      >
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`tab-trigger ${tab === t.id ? "tab-trigger-active" : ""}`}
+            className={`tab-trigger shrink-0 ${tab === t.id ? "tab-trigger-active" : ""}`}
           >
             {t.label}
           </button>
@@ -131,7 +145,7 @@ export default function ResponsePanel({
       </div>
 
       {/* Main Panel Content */}
-      <div className="flex-1 overflow-auto px-4 py-3 font-mono text-sm">
+      <div className={`flex-1 overflow-auto font-mono text-sm ${isMobile ? "px-3 py-2" : "px-4 py-3"}`}>
         {tab === "body" && (
           <pre className="whitespace-pre-wrap text-text-primary">
             {renderFormattedBody()}
@@ -140,9 +154,9 @@ export default function ResponsePanel({
         {tab === "headers" && (
           <div className="flex flex-col gap-1">
             {Object.entries(response.headers || {}).map(([k, v]) => (
-              <div key={k} className="flex gap-2">
-                <span className="text-secondary">{k}:</span>
-                <span className="text-text-primary">{v}</span>
+              <div key={k} className={`flex ${isMobile ? "flex-col" : "gap-2"}`}>
+                <span className={`text-secondary ${isMobile ? "text-xs" : ""}`}>{k}:</span>
+                <span className={`text-text-primary ${isMobile ? "text-xs break-all" : ""}`}>{v}</span>
               </div>
             ))}
           </div>

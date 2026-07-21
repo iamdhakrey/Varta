@@ -102,3 +102,50 @@
         @apply bg-panel border border-border rounded-md text-sm text-text-primary placeholder:text-text-muted px-3 py-1.5 outline-none focus:border-primary focus:ring-1 focus:ring-primary/40 transition-colors;
     }
 }
+
+/* ── Mobile utilities ─────────────────────────────────────────────────── */
+
+/* Hide scrollbar but keep scrolling (for horizontal tab strips on touch) */
+@utility scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* Sidebar slide-in from left */
+@keyframes sidebar-slide-in {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes sidebar-slide-out {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-100%);
+    }
+}
+
+@keyframes backdrop-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@utility animate-sidebar-in {
+    animation: sidebar-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@utility animate-backdrop-in {
+    animation: backdrop-fade-in 0.2s ease-out forwards;
+}

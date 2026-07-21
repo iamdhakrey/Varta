@@ -37,9 +37,13 @@ const METHOD_COLORS: Record<string, string> = {
   QUERY: "text-text-muted",
 };
 
+interface CommandPaletteProps {
+  isMobile?: boolean;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function CommandPalette() {
+export default function CommandPalette({ isMobile = false }: CommandPaletteProps) {
   const isOpen = useVartaStore((s) => s.isCommandPaletteOpen);
   const toggle = useVartaStore((s) => s.toggleCommandPalette);
   const newTab = useVartaStore((s) => s.newTab);
@@ -60,7 +64,7 @@ export default function CommandPalette() {
         id: "action-new-tab",
         category: "actions",
         label: "New Request Tab",
-        hint: "Ctrl+T",
+        hint: isMobile ? undefined : "Ctrl+T",
         icon: <Plus className="w-3.5 h-3.5" />,
         action: () => newTab(),
       },
@@ -68,7 +72,7 @@ export default function CommandPalette() {
         id: "action-settings",
         category: "actions",
         label: "Open Settings",
-        hint: "Ctrl+,",
+        hint: isMobile ? undefined : "Ctrl+,",
         icon: <Settings2 className="w-3.5 h-3.5" />,
         action: () => setSettingsOpen(true),
       },
@@ -117,7 +121,7 @@ export default function CommandPalette() {
     }
 
     return [...actions, ...requestItems];
-  }, [newTab, openRequest, toggleHistory, setSettingsOpen, collectionTrees]);
+  }, [newTab, openRequest, toggleHistory, setSettingsOpen, collectionTrees, isMobile]);
 
   // ── Filter by query ───────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -189,12 +193,16 @@ export default function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 pt-[13vh] backdrop-blur-sm animate-in fade-in duration-150"
+      className={`fixed inset-0 z-50 flex items-start justify-center bg-black/55 backdrop-blur-sm animate-in fade-in duration-150 ${
+        isMobile ? "pt-[5vh]" : "pt-[13vh]"
+      }`}
       onClick={() => toggle(false)}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[560px] overflow-hidden rounded-xl border border-border bg-panel shadow-elevated animate-in zoom-in-95 duration-150"
+        className={`overflow-hidden rounded-xl border border-border bg-panel shadow-elevated animate-in zoom-in-95 duration-150 ${
+          isMobile ? "w-[95vw]" : "w-[560px]"
+        }`}
       >
         {/* Search input */}
         <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-3">
@@ -245,17 +253,19 @@ export default function CommandPalette() {
         </div>
 
         {/* Footer hint */}
-        <div className="border-t border-border bg-panel-raised px-3.5 py-2 flex items-center gap-3 text-[10px] text-text-muted">
-          <span className="flex items-center gap-1">
-            <kbd className="kbd">↑↓</kbd> navigate
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="kbd">↵</kbd> open
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="kbd">Esc</kbd> close
-          </span>
-        </div>
+        {!isMobile && (
+          <div className="border-t border-border bg-panel-raised px-3.5 py-2 flex items-center gap-3 text-[10px] text-text-muted">
+            <span className="flex items-center gap-1">
+              <kbd className="kbd">↑↓</kbd> navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="kbd">↵</kbd> open
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="kbd">Esc</kbd> close
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

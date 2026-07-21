@@ -19,7 +19,13 @@ const SUB_TABS: { id: SubTab; label: string }[] = [
   { id: "body", label: "Body" },
 ];
 
-function RequestPanel({ tab }: { tab: RequestTab }) {
+function RequestPanel({
+  tab,
+  isMobile,
+}: {
+  tab: RequestTab;
+  isMobile: boolean;
+}) {
   const [subTab, setSubTab] = useState<SubTab>("params");
   const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
   const saveActiveRequest = useVartaStore((s) => s.saveActiveRequest);
@@ -39,14 +45,21 @@ function RequestPanel({ tab }: { tab: RequestTab }) {
 
   return (
     <div className="flex h-full flex-col">
-      <RequestBar tab={tab} />
+      <RequestBar tab={tab} isMobile={isMobile} />
 
-      <div className="flex gap-1 border-b border-border px-4">
+      {/* Sub-tabs — scrollable on mobile */}
+      <div
+        className={`flex gap-1 border-b border-border ${
+          isMobile
+            ? "overflow-x-auto scrollbar-hide px-2"
+            : "px-4"
+        }`}
+      >
         {SUB_TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`tab-trigger ${subTab === t.id ? "tab-trigger-active" : ""}`}
+            className={`tab-trigger shrink-0 ${subTab === t.id ? "tab-trigger-active" : ""}`}
           >
             {t.label}
           </button>
@@ -60,6 +73,7 @@ function RequestPanel({ tab }: { tab: RequestTab }) {
             onChange={(rows) => updateActiveRequest({ params: rows })}
             keyPlaceholder="Key"
             valuePlaceholder="Value"
+            isMobile={isMobile}
           />
         )}
         {subTab === "headers" && (
@@ -69,18 +83,21 @@ function RequestPanel({ tab }: { tab: RequestTab }) {
             keyPlaceholder="Key"
             valuePlaceholder="Value"
             suggestKeys
+            isMobile={isMobile}
           />
         )}
         {subTab === "cookies" && (
           <CookiesTab
             rows={tab.request.cookies}
             onChange={(rows) => updateActiveRequest({ cookies: rows })}
+            isMobile={isMobile}
           />
         )}
         {subTab === "auth" && (
           <AuthTab
             auth={tab.request.auth}
             onChange={(auth) => updateActiveRequest({ auth })}
+            isMobile={isMobile}
           />
         )}
         {subTab === "body" && (
@@ -96,6 +113,7 @@ function RequestPanel({ tab }: { tab: RequestTab }) {
               })),
             }}
             onChange={(body) => updateActiveRequest({ body })}
+            isMobile={isMobile}
           />
         )}
       </div>
@@ -103,7 +121,11 @@ function RequestPanel({ tab }: { tab: RequestTab }) {
   );
 }
 
-export default function RequestEditor() {
+interface RequestEditorProps {
+  isMobile?: boolean;
+}
+
+export default function RequestEditor({ isMobile = false }: RequestEditorProps) {
   const tabs = useVartaStore((s) => s.tabs);
   const activeTabId = useVartaStore((s) => s.activeTabId);
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -111,7 +133,11 @@ export default function RequestEditor() {
   return (
     <div className="flex h-full flex-1 flex-col bg-bg">
       <TabStrip />
-      {activeTab ? <RequestPanel tab={activeTab} /> : <EmptyState />}
+      {activeTab ? (
+        <RequestPanel tab={activeTab} isMobile={isMobile} />
+      ) : (
+        <EmptyState isMobile={isMobile} />
+      )}
     </div>
   );
 }

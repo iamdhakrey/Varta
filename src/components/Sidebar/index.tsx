@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, Upload, Settings } from "lucide-react";
+import { Search, Plus, Upload, Settings, X } from "lucide-react";
 import {
   useVartaStore,
   useSettingsStore,
@@ -9,7 +9,12 @@ import { WorkspaceSelector } from "./WorkspaceSelector";
 import { CollectionsTree } from "./CollectionTree";
 import { EnvironmentSelector } from "./EnvironmentSelector";
 
-export default function Sidebar() {
+interface SidebarProps {
+  isMobile: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isMobile, onClose }: SidebarProps) {
   const [query, setQuery] = useState("");
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const fetchEnvironments = useWorkspaceStore((s) => s.fetchEnvironments);
@@ -24,8 +29,38 @@ export default function Sidebar() {
     }
   }, [activeWorkspaceId, fetchEnvironments]);
 
+  const handleNewTab = () => {
+    newTab();
+    if (isMobile && onClose) onClose();
+  };
+
+  const handleSettings = () => {
+    setSettingsOpen(true);
+    if (isMobile && onClose) onClose();
+  };
+
   return (
-    <aside className="flex h-full w-[280px] shrink-0 flex-col border-r border-border bg-bg">
+    <aside
+      className={`flex h-full shrink-0 flex-col border-r border-border bg-bg ${
+        isMobile ? "w-[85vw] max-w-[320px]" : "w-[280px]"
+      }`}
+    >
+      {/* Mobile close header */}
+      {isMobile && (
+        <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
+          <span className="text-sm font-semibold bg-brand-gradient bg-clip-text text-transparent">
+            Varta
+          </span>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary"
+            aria-label="Close sidebar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       {/* Workspace switcher */}
       <WorkspaceSelector />
 
@@ -42,7 +77,7 @@ export default function Sidebar() {
             placeholder="Search requests"
             className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none"
           />
-          <kbd className="kbd">⌘P</kbd>
+          {!isMobile && <kbd className="kbd">⌘P</kbd>}
         </div>
       </div>
 
@@ -55,7 +90,7 @@ export default function Sidebar() {
         <EnvironmentSelector />
 
         <button
-          onClick={newTab}
+          onClick={handleNewTab}
           className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary py-1.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors cursor-pointer"
         >
           <Plus size={14} />
@@ -70,7 +105,7 @@ export default function Sidebar() {
       {/* FOOTER - Stacked Buttons */}
       <div className="flex flex-col gap-1 border-t border-border p-2">
         <button
-          onClick={() => setSettingsOpen(true)}
+          onClick={handleSettings}
           className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-borderMuted hover:text-text-primary"
         >
           <Settings size={16} />

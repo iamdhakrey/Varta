@@ -12,6 +12,7 @@ interface VartaState {
   isHistoryOpen: boolean;
   activeEnvId: string;
   isEnvEditorOpen: boolean;
+  isSidebarOpen: boolean;
 
 
   openRequest: (request: ApiRequest) => void;
@@ -24,6 +25,8 @@ interface VartaState {
   toggleCommandPalette: (open?: boolean) => void;
   toggleHistory: (open?: boolean) => void;
   setEnv: (id: string) => void;
+  toggleSidebar: (open?: boolean) => void;
+  setSidebarOpen: (open: boolean) => void;
 
   openEnvEditor: () => void;
   closeEnvEditor: () => void;
@@ -53,7 +56,12 @@ export const useVartaStore = create<VartaState>((set, get) => ({
   isHistoryOpen: false,
   activeEnvId: "env-staging",
   isEnvEditorOpen: false,
+  isSidebarOpen: false,
 
+
+  toggleSidebar: (open) =>
+    set((s) => ({ isSidebarOpen: open !== undefined ? open : !s.isSidebarOpen })),
+  setSidebarOpen: (open) => set({ isSidebarOpen: open }),
 
   openEnvEditor: () => set({ isEnvEditorOpen: true }),
 

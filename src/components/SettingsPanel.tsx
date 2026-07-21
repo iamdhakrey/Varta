@@ -31,7 +31,11 @@ const SHORTCUT_LIST = [
   { action: "Close Modal / Palette", keys: ["Esc"] },
 ];
 
-export const SettingsPanel: React.FC = () => {
+interface SettingsPanelProps {
+  isMobile?: boolean;
+}
+
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isMobile = false }) => {
   const { isSettingsOpen, setSettingsOpen, settings, updateSettings, isLoadingSettings, fetchSettings } =
     useSettingsStore();
 
@@ -85,49 +89,82 @@ export const SettingsPanel: React.FC = () => {
       onMouseDown={() => setSettingsOpen(false)}
     >
       <div
-        className="relative flex w-full max-w-3xl h-[78vh] overflow-hidden rounded-xl border border-border bg-bg shadow-elevated animate-in zoom-in-95 duration-200"
+        className={`relative flex overflow-hidden rounded-xl border border-border bg-bg shadow-elevated animate-in zoom-in-95 duration-200 ${
+          isMobile
+            ? "w-[95vw] h-[90vh] flex-col"
+            : "w-full max-w-3xl h-[78vh] flex-row"
+        }`}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {/* ── Left nav sidebar ── */}
-        <aside className="flex w-48 shrink-0 flex-col border-r border-border bg-panel p-3 gap-1">
-          <div className="mb-2 px-2">
-            <h2 className="text-xs font-bold tracking-widest text-text-muted uppercase">
-              Settings
-            </h2>
-          </div>
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer text-left ${
-                activeTab === tab.id
-                  ? "bg-primary/15 text-primary"
-                  : "text-text-secondary hover:bg-borderMuted hover:text-text-primary"
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </aside>
-
-        {/* ── Right content area ── */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-border bg-panel-raised px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold text-text-primary">
-                {TABS.find((t) => t.id === activeTab)?.label}
-              </h2>
+        {/* ── Nav — sidebar on desktop, horizontal tabs on mobile ── */}
+        {isMobile ? (
+          <div className="flex items-center gap-1 border-b border-border bg-panel px-3 py-2 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-1 flex-1">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
+                    activeTab === tab.id
+                      ? "bg-primary/15 text-primary"
+                      : "text-text-secondary hover:bg-borderMuted hover:text-text-primary"
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
             </div>
             <button
               onClick={() => setSettingsOpen(false)}
-              className="rounded-md p-1.5 text-text-muted hover:bg-borderMuted hover:text-text-primary transition-colors cursor-pointer"
+              className="shrink-0 rounded-md p-1.5 text-text-muted hover:bg-borderMuted hover:text-text-primary transition-colors cursor-pointer ml-2"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+        ) : (
+          <aside className="flex w-48 shrink-0 flex-col border-r border-border bg-panel p-3 gap-1">
+            <div className="mb-2 px-2">
+              <h2 className="text-xs font-bold tracking-widest text-text-muted uppercase">
+                Settings
+              </h2>
+            </div>
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer text-left ${
+                  activeTab === tab.id
+                    ? "bg-primary/15 text-primary"
+                    : "text-text-secondary hover:bg-borderMuted hover:text-text-primary"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </aside>
+        )}
+
+        {/* ── Right content area ── */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Header — desktop only (mobile has close in the tab bar) */}
+          {!isMobile && (
+            <div className="flex items-center justify-between border-b border-border bg-panel-raised px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-primary" />
+                <h2 className="text-sm font-semibold text-text-primary">
+                  {TABS.find((t) => t.id === activeTab)?.label}
+                </h2>
+              </div>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className="rounded-md p-1.5 text-text-muted hover:bg-borderMuted hover:text-text-primary transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto">
@@ -137,15 +174,16 @@ export const SettingsPanel: React.FC = () => {
                 isLoading={isLoadingSettings}
                 onSubmit={handleSubmit}
                 updateField={updateField}
+                isMobile={isMobile}
               />
             )}
             {activeTab === "appearance" && <AppearanceTab />}
-            {activeTab === "shortcuts" && <ShortcutsTab />}
+            {activeTab === "shortcuts" && <ShortcutsTab isMobile={isMobile} />}
           </div>
 
           {/* Footer — only shown on General tab */}
           {activeTab === "general" && (
-            <div className="flex items-center justify-end gap-2 border-t border-border bg-panel-raised px-5 py-3">
+            <div className={`flex items-center justify-end gap-2 border-t border-border bg-panel-raised ${isMobile ? "px-3 py-2.5" : "px-5 py-3"}`}>
               <button
                 type="button"
                 onClick={() => setSettingsOpen(false)}
@@ -175,9 +213,10 @@ interface GeneralTabProps {
   isLoading: boolean;
   onSubmit: (e: React.FormEvent) => void;
   updateField: <K extends keyof AppSettings>(field: K, value: AppSettings[K]) => void;
+  isMobile?: boolean;
 }
 
-const GeneralTab: React.FC<GeneralTabProps> = ({ formData, isLoading, onSubmit, updateField }) => {
+const GeneralTab: React.FC<GeneralTabProps> = ({ formData, isLoading, onSubmit, updateField, isMobile = false }) => {
   if (isLoading || !formData) {
     return (
       <div className="flex items-center justify-center h-full text-text-muted text-sm">
@@ -187,7 +226,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, isLoading, onSubmit, 
   }
 
   return (
-    <form id="settings-general-form" onSubmit={onSubmit} className="flex flex-col gap-6 p-6">
+    <form id="settings-general-form" onSubmit={onSubmit} className={`flex flex-col gap-6 ${isMobile ? "p-4" : "p-6"}`}>
       {/* HTTP Behavior */}
       <section className="flex flex-col gap-4">
         <h3 className="text-[11px] font-bold tracking-wider text-text-muted uppercase">
@@ -202,7 +241,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, isLoading, onSubmit, 
           onChange={(v) => updateField("followRedirects", v)}
         />
 
-        <div className="flex items-center justify-between">
+        <div className={`flex items-center justify-between ${isMobile ? "flex-wrap gap-2" : ""}`}>
           <label className="text-sm font-medium text-text-primary">Max Redirects</label>
           <input
             type="number"
@@ -290,8 +329,8 @@ const AppearanceTab: React.FC = () => (
 
 // ─── Shortcuts Tab ───────────────────────────────────────────────────────────
 
-const ShortcutsTab: React.FC = () => (
-  <div className="flex flex-col gap-4 p-6">
+const ShortcutsTab: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => (
+  <div className={`flex flex-col gap-4 ${isMobile ? "p-4" : "p-6"}`}>
     <h3 className="text-[11px] font-bold tracking-wider text-text-muted uppercase">
       Keyboard Shortcuts
     </h3>
@@ -299,9 +338,11 @@ const ShortcutsTab: React.FC = () => (
       {SHORTCUT_LIST.map(({ action, keys }) => (
         <div
           key={action}
-          className="flex items-center justify-between px-4 py-2.5 bg-panel hover:bg-panel-raised transition-colors"
+          className={`flex items-center justify-between bg-panel hover:bg-panel-raised transition-colors ${
+            isMobile ? "px-3 py-2" : "px-4 py-2.5"
+          }`}
         >
-          <span className="text-sm text-text-primary">{action}</span>
+          <span className={`text-text-primary ${isMobile ? "text-xs" : "text-sm"}`}>{action}</span>
           <div className="flex items-center gap-1">
             {keys.map((k, i) => (
               <React.Fragment key={k}>
