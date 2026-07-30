@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
-use rustls::client::danger::DangerousClientConfig;
 use rustls::ClientConfig;
 use tauri::{AppHandle, Emitter, State};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -56,7 +55,7 @@ impl ServerCertVerifier for NoCertificateVerification {
             .supported_schemes()
     }
 }
-fn build_ws_client(setting: &AppSettings) -> AppResult<Connector> {
+fn build_ws_client(_setting: &AppSettings) -> AppResult<Connector> {
     let mut config = ClientConfig::builder()
         .with_root_certificates(rustls::RootCertStore::empty())
         .with_no_client_auth();
