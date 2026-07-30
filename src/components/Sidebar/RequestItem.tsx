@@ -34,7 +34,7 @@ export const RequestItem: React.FC<{ request: ApiRequest }> = ({ request }) => {
       </div>
 
       {/* Hover Actions */}
-      <div className="opacity-0 group-hover:opacity-100 flex items-center transition-opacity pr-1">
+      <div className="opacity-70 group-hover:opacity-100 flex items-center transition-opacity pr-1">
         <button
           onClick={(e) => {
             e.stopPropagation(); // Prevents the row click (open tab) from firing when deleting

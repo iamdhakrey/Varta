@@ -109,11 +109,10 @@ export const WorkspaceSelector: React.FC = () => {
               workspaces.map((workspace) => (
                 <div
                   key={workspace.id}
-                  className={`group flex items-center justify-between px-3 py-1.5 mx-1 my-0.5 rounded-md text-sm text-text-secondary hover:bg-panel hover:text-text-primary transition-all duration-150 ${
-                    workspace.id === activeWorkspaceId
+                  className={`group flex items-center justify-between px-3 py-1.5 mx-1 my-0.5 rounded-md text-sm text-text-secondary hover:bg-panel hover:text-text-primary transition-all duration-150 ${workspace.id === activeWorkspaceId
                       ? "bg-panel/40 text-text-primary"
                       : ""
-                  }`}
+                    }`}
                 >
                   {editingId === workspace.id ? (
                     // Inline Edit Form
@@ -161,7 +160,7 @@ export const WorkspaceSelector: React.FC = () => {
                       </button>
 
                       {/* Action buttons revealed on item hover */}
-                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                      <div className="opacity-70 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                         <button
                           onClick={() => {
                             setEditingId(workspace.id);

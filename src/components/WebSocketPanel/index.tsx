@@ -85,18 +85,18 @@ export default function WebSocketPanel({
         <div className="flex items-center gap-2">
           <div
             className={`h-2 w-2 rounded-full ${isConnected
-                ? "bg-success animate-pulse"
-                : isConnecting
-                  ? "bg-warning animate-pulse"
-                  : "bg-text-muted"
+              ? "bg-success animate-pulse"
+              : isConnecting
+                ? "bg-warning animate-pulse"
+                : "bg-text-muted"
               }`}
           />
           <span
             className={`font-medium ${isConnected
-                ? "text-success"
-                : isConnecting
-                  ? "text-warning"
-                  : "text-text-muted"
+              ? "text-success"
+              : isConnecting
+                ? "text-warning"
+                : "text-text-muted"
               }`}
           >
             {isConnected
@@ -182,8 +182,8 @@ export default function WebSocketPanel({
                       <div
                         key={i}
                         className={`group flex gap-2 rounded-md border px-3 py-2 text-sm font-mono transition-colors ${isSent
-                            ? "border-primary/20 bg-primary/5"
-                            : "border-secondary/20 bg-secondary/5"
+                          ? "border-primary/20 bg-primary/5"
+                          : "border-secondary/20 bg-secondary/5"
                           }`}
                       >
                         <div className="shrink-0 pt-0.5">
@@ -339,7 +339,7 @@ export default function WebSocketPanel({
                       <span className="text-sm font-medium text-text-primary">
                         {msg.name}
                       </span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleSendSaved(msg)}
                           disabled={!isConnected}

@@ -85,7 +85,7 @@ export const CollectionsTree: React.FC = () => {
         </div>
         <button
           onClick={() => setIsAddingCollection(true)}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded text-text-muted hover:text-text-primary hover:bg-panel transition-all cursor-pointer"
+          className="opacity-70 group-hover:opacity-100 p-1 rounded text-text-muted hover:text-text-primary hover:bg-panel transition-all cursor-pointer"
           title="New Collection"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -147,7 +147,7 @@ export const CollectionsTree: React.FC = () => {
                   </div>
 
                   {/* Hover Actions */}
-                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
+                  <div className="opacity-70 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
 
                     {/* Add Item Dropdown Trigger */}
                     <div className="relative">

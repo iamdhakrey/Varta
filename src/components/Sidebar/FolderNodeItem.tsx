@@ -130,7 +130,7 @@ export const FolderNodeItem: React.FC<{ node: FolderNodeType; level?: number }> 
             </div>
 
             {/* Hover Actions (Options Dropdown) */}
-            <div className="opacity-0 group-hover:opacity-100 flex items-center transition-opacity pr-1" ref={menuRef}>
+            <div className="opacity-70 group-hover:opacity-100 flex items-center transition-opacity pr-1" ref={menuRef}>
               <div className="relative">
                 <button
                   onClick={(e) => {

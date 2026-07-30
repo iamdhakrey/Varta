@@ -50,7 +50,7 @@ export default function TabStrip() {
               </span>
               <X
                 size={12}
-                className="ml-auto shrink-0 text-text-muted opacity-0 group-hover:opacity-100 hover:text-text-primary"
+                className="ml-auto shrink-0 text-text-muted opacity-70 group-hover:opacity-100 hover:text-text-primary"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(tab.id);
