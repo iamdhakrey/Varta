@@ -11,6 +11,7 @@ const methodColors: Record<HttpMethod, string> = {
   DELETE: "text-method-delete",
   OPTIONS: "text-text-muted",
   HEAD: "text-text-muted",
+  WS: "text-method-ws",
 };
 
 export const RequestItem: React.FC<{ request: ApiRequest }> = ({ request }) => {

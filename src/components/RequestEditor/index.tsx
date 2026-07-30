@@ -8,16 +8,28 @@ import CookiesTab from "./CookiesTab";
 import AuthTab from "./AuthTab";
 import BodyTab from "./BodyTab";
 import EmptyState from "../EmptyState";
+import SavedWSTab from "./SavedWSTab";
 
-type SubTab = "params" | "headers" | "cookies" | "auth" | "body";
+type SubTab = "params" | "headers" | "cookies" | "auth" | "body" | "saved";
 
-const SUB_TABS: { id: SubTab; label: string }[] = [
+const HTTP_SUB_TABS: { id: SubTab; label: string }[] = [
   { id: "params", label: "Params" },
   { id: "headers", label: "Headers" },
   { id: "cookies", label: "Cookies" },
   { id: "auth", label: "Authorization" },
   { id: "body", label: "Body" },
 ];
+
+const WS_SUB_TABS: { id: SubTab; label: string }[] = [
+  { id: "params", label: "Params" },
+  { id: "headers", label: "Headers" },
+  { id: "saved", label: "Saved" },
+];
+
+function isWsUrl(url: string): boolean {
+  const lower = url.trim().toLowerCase();
+  return lower.startsWith("ws://") || lower.startsWith("wss://");
+}
 
 function RequestPanel({
   tab,
@@ -30,18 +42,26 @@ function RequestPanel({
   const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
   const saveActiveRequest = useVartaStore((s) => s.saveActiveRequest);
 
-    // Global Keydown Listener for Save
-    useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-          e.preventDefault(); // Block browser "Save Page" dialog
-          saveActiveRequest();
-        }
-      };
+  const isWs = isWsUrl(tab.request.url);
+  const visibleTabs = isWs ? WS_SUB_TABS : HTTP_SUB_TABS;
 
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [saveActiveRequest]);
+  // If the current sub-tab is hidden (e.g. "body" while in WS mode), reset.
+  const activeSubTab = visibleTabs.find((t) => t.id === subTab)
+    ? subTab
+    : visibleTabs[0].id;
+
+  // Global Keydown Listener for Save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault(); // Block browser "Save Page" dialog
+        saveActiveRequest();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [saveActiveRequest]);
 
   return (
     <div className="flex h-full flex-col">
@@ -50,16 +70,14 @@ function RequestPanel({
       {/* Sub-tabs — scrollable on mobile */}
       <div
         className={`flex gap-1 border-b border-border ${
-          isMobile
-            ? "overflow-x-auto scrollbar-hide px-2"
-            : "px-4"
+          isMobile ? "overflow-x-auto scrollbar-hide px-2" : "px-4"
         }`}
       >
-        {SUB_TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`tab-trigger shrink-0 ${subTab === t.id ? "tab-trigger-active" : ""}`}
+            className={`tab-trigger shrink-0 ${activeSubTab === t.id ? "tab-trigger-active" : ""}`}
           >
             {t.label}
           </button>
@@ -67,7 +85,7 @@ function RequestPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {subTab === "params" && (
+        {activeSubTab === "params" && (
           <KeyValueTable
             rows={tab.request.params}
             onChange={(rows) => updateActiveRequest({ params: rows })}
@@ -76,7 +94,7 @@ function RequestPanel({
             isMobile={isMobile}
           />
         )}
-        {subTab === "headers" && (
+        {activeSubTab === "headers" && (
           <KeyValueTable
             rows={tab.request.headers}
             onChange={(rows) => updateActiveRequest({ headers: rows })}
@@ -86,21 +104,38 @@ function RequestPanel({
             isMobile={isMobile}
           />
         )}
-        {subTab === "cookies" && (
+
+        {activeSubTab === "saved" && (
+          <SavedWSTab tab={tab} isMobile={isMobile} />
+        )}
+
+        {/*<button
+          onClick={() => setSubTab("saved")}
+          className={`tab-trigger shrink-0 ${subTab === "saved" ? "tab-trigger-active" : ""}`}
+        >
+          <Bookmark size={12} className="inline mr-1" />
+          Saved
+          {tab.wsSavedMessages.length > 0 && (
+            <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] text-primary">
+              {tab.wsSavedMessages.length}
+            </span>
+          )}
+        </button>*/}
+        {activeSubTab === "cookies" && (
           <CookiesTab
             rows={tab.request.cookies}
             onChange={(rows) => updateActiveRequest({ cookies: rows })}
             isMobile={isMobile}
           />
         )}
-        {subTab === "auth" && (
+        {activeSubTab === "auth" && (
           <AuthTab
             auth={tab.request.auth}
             onChange={(auth) => updateActiveRequest({ auth })}
             isMobile={isMobile}
           />
         )}
-        {subTab === "body" && (
+        {activeSubTab === "body" && (
           <BodyTab
             body={{
               ...tab.request.body,
@@ -125,7 +160,9 @@ interface RequestEditorProps {
   isMobile?: boolean;
 }
 
-export default function RequestEditor({ isMobile = false }: RequestEditorProps) {
+export default function RequestEditor({
+  isMobile = false,
+}: RequestEditorProps) {
   const tabs = useVartaStore((s) => s.tabs);
   const activeTabId = useVartaStore((s) => s.activeTabId);
   const activeTab = tabs.find((t) => t.id === activeTabId);

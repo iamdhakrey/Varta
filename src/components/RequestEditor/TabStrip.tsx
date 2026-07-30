@@ -22,6 +22,7 @@ export default function TabStrip() {
   const toggleHistory = useVartaStore((s) => s.toggleHistory);
   const setSettingsOpen = useSettingsStore((s) => s.setSettingsOpen);
 
+
   const [showOverflow, setShowOverflow] = useState(false);
 
   return (
@@ -33,11 +34,10 @@ export default function TabStrip() {
             <div
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`group flex max-w-[180px] shrink-0 cursor-pointer items-center gap-2 border-r border-border px-3 py-2.5 text-sm ${
-                active
-                  ? "bg-bg text-text-primary border-t-2 border-t-primary"
-                  : "text-text-secondary border-t-2 border-t-transparent hover:bg-panel-raised"
-              }`}
+              className={`group flex max-w-[180px] shrink-0 cursor-pointer items-center gap-2 border-r border-border px-3 py-2.5 text-sm ${active
+                ? "bg-bg text-text-primary border-t-2 border-t-primary"
+                : "text-text-secondary border-t-2 border-t-transparent hover:bg-panel-raised"
+                }`}
             >
               <span
                 className={`text-[10px] font-semibold ${MethodStyles[tab.request.method as HttpMethod]}`}
