@@ -110,6 +110,21 @@ pub async fn create_request(
 }
 
 #[tauri::command]
+pub async fn create_ws_request(
+    state: State<'_, AppState>,
+    collectionid: String,
+    folderid: Option<String>,
+    name: String,
+) -> crate::error::AppResult<crate::models::ApiRequest> {
+    crate::db::collections::create_ws_request(
+        &state.data_dir,
+        &collectionid,
+        folderid.as_deref(),
+        &name,
+    )
+}
+
+#[tauri::command]
 pub async fn delete_request(
     state: State<'_, AppState>,
     requestid: String,

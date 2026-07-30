@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tokio::sync::mpsc;
+use tokio_tungstenite::tungstenite::Message;
 
+pub type WsTx = mpsc::UnboundedSender<Message>;
 // ---------------------------------------------------------------------
 // Requests
 // ---------------------------------------------------------------------
@@ -396,4 +399,29 @@ pub struct ActiveState {
     pub active_workspace_id: Option<String>,
     pub active_environment_id: Option<String>,
     pub active_theme_id: Option<String>,
+}
+
+// --------------------------------------------------------------------
+// Websocket
+// --------------------------------------------------------------------
+
+/// A saved message template the user creates for reuse — persisted to
+/// YAML alongside the request that owns it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WsSavedMessage {
+    pub id: String,
+    pub name: String,
+    pub data: String,
+}
+
+/// Payload emitted over the Tauri event channel for each WS frame
+/// (both sent and received).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WsEvent {
+    pub connection_id: String,
+    pub direction: String,
+    pub data: String,
+    pub timestamp: String,
 }

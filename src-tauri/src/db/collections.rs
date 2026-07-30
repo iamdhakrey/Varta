@@ -366,6 +366,29 @@ pub fn create_request(
     Ok(request)
 }
 
+pub fn create_ws_request(
+    dd: &DataDir,
+    collection_id: &str,
+    folder_id: Option<&str>,
+    name: &str,
+) -> AppResult<ApiRequest> {
+    let request = ApiRequest {
+        id: new_id(),
+        collection_id: collection_id.to_string(),
+        folder_id: folder_id.map(str::to_string),
+        name: name.to_string(),
+        method: HttpMethod::Get,
+        url: "ws://".to_string(),
+        params: vec![],
+        headers: vec![],
+        cookies: vec![],
+        auth: AuthConfig::default(),
+        body: RequestBody::default(),
+    };
+    save_request(dd, &request)?;
+    Ok(request)
+}
+
 /// Upsert — used both to create a brand-new request row (frontend
 /// generates the id client-side when a tab opens) and to save edits.
 pub fn save_request(dd: &DataDir, request: &ApiRequest) -> AppResult<()> {

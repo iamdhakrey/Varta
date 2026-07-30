@@ -1,9 +1,9 @@
 use tauri::Manager;
 
 use crate::commands::collections::{
-    clone_collection, create_collection, create_folder, create_request, delete_collection,
-    delete_folder, delete_request, duplicate_request, get_collection_trees, get_request,
-    rename_collection, rename_folder, rename_request, save_request,
+    clone_collection, create_collection, create_folder, create_request, create_ws_request,
+    delete_collection, delete_folder, delete_request, duplicate_request, get_collection_trees,
+    get_request, rename_collection, rename_folder, rename_request, save_request,
 };
 use crate::commands::environments::{
     create_environment, delete_environment, list_environments, list_variables, rename_environment,
@@ -16,6 +16,10 @@ use crate::commands::workspaces::{
 };
 use crate::http::send_request;
 use crate::state::AppState;
+use crate::ws::{
+    ws_connect, ws_disconnect, ws_send, ws_add_saved_message, ws_delete_saved_message,
+    ws_list_saved_messages, ws_update_saved_message,
+};
 
 mod commands;
 pub mod db;
@@ -23,6 +27,7 @@ mod error;
 mod http;
 mod models;
 mod state;
+pub mod ws;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -45,7 +50,10 @@ pub fn run() {
 
             let data_dir = db::init_data_dir(&data_dir).expect("initialize data directory");
 
-            app_handle.manage(AppState { data_dir });
+            app_handle.manage(AppState {
+                data_dir,
+                ws_connections: Default::default(),
+            });
 
             Ok(())
         })
@@ -71,6 +79,7 @@ pub fn run() {
             delete_folder,
             // Request commands
             create_request,
+            create_ws_request,
             rename_request,
             delete_request,
             get_request,
@@ -87,6 +96,14 @@ pub fn run() {
             list_variables,
             replace_variables,
             set_active_environment,
+            // WebSocket commands
+            ws_connect,
+            ws_send,
+            ws_disconnect,
+            ws_list_saved_messages,
+            ws_add_saved_message,
+            ws_update_saved_message,
+            ws_delete_saved_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
