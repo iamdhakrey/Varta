@@ -17,8 +17,8 @@ use crate::commands::workspaces::{
 use crate::http::send_request;
 use crate::state::AppState;
 use crate::ws::{
-    ws_connect, ws_disconnect, ws_send, ws_add_saved_message, ws_delete_saved_message,
-    ws_list_saved_messages, ws_update_saved_message,
+    ws_add_saved_message, ws_connect, ws_delete_saved_message, ws_disconnect,
+    ws_list_saved_messages, ws_send, ws_update_saved_message,
 };
 
 mod commands;
