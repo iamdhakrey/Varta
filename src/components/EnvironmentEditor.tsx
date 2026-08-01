@@ -140,11 +140,10 @@ export const EnvironmentEditor: React.FC<{ activeWorkspaceId: string }> = ({
             <div
               key={env.environment.id}
               onClick={() => setActiveEnvironment(env.environment.id)}
-              className={`group flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
-                activeEnvironmentId === env.environment.id
+              className={`group flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${activeEnvironmentId === env.environment.id
                   ? "bg-primary/20 text-text-primary"
                   : "text-text-secondary hover:bg-borderMuted"
-              }`}
+                }`}
             >
               {editingId === env.environment.id ? (
                 <form
@@ -177,7 +176,7 @@ export const EnvironmentEditor: React.FC<{ activeWorkspaceId: string }> = ({
                   <span className="truncate text-sm font-medium">
                     {env.environment.name}
                   </span>
-                  <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                  <div className="opacity-70 group-hover:opacity-100 flex gap-1">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -218,11 +217,10 @@ export const EnvironmentEditor: React.FC<{ activeWorkspaceId: string }> = ({
                 <button
                   onClick={handleSaveVariables}
                   disabled={!isDirty}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-all ${
-                    isDirty
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-all ${isDirty
                       ? "bg-primary text-white hover:bg-primary-hover shadow-panel"
                       : "bg-panel text-text-muted opacity-50 cursor-default"
-                  }`}
+                    }`}
                 >
                   <Save size={16} />
                   Save
@@ -301,7 +299,7 @@ export const EnvironmentEditor: React.FC<{ activeWorkspaceId: string }> = ({
                       <div className="w-10 flex justify-center">
                         <button
                           onClick={() => removeVarRow(v.id)}
-                          className="text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-text-muted hover:text-error opacity-70 group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 size={16} />
                         </button>

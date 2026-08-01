@@ -27,13 +27,13 @@ export const FolderNodeItem: React.FC<{ node: FolderNodeType; level?: number }> 
 
   // Dropdown & Creation States
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [addingItem, setAddingItem] = useState<"folder" | "request" | null>(null);
+  const [addingItem, setAddingItem] = useState<"folder" | "request" | "ws" | null>(null);
   const [newItemName, setNewItemName] = useState("");
 
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Make sure 'renameFolder' is exported from your store!
-  const { createFolder, createRequest, deleteFolder, renameFolder } = useWorkspaceStore();
+  const { createFolder, createRequest, deleteFolder, renameFolder, createWs } = useWorkspaceStore();
 
   // Handle click outside for the dropdown menu
   useEffect(() => {
@@ -52,6 +52,8 @@ export const FolderNodeItem: React.FC<{ node: FolderNodeType; level?: number }> 
 
     if (addingItem === "folder") {
       await createFolder(node.folder.collectionId, node.folder.id, newItemName);
+    } else if (addingItem === "ws") {
+      await createWs(node.folder.collectionId, node.folder.id, newItemName);
     } else {
       await createRequest(node.folder.collectionId, node.folder.id, newItemName);
     }
@@ -65,7 +67,7 @@ export const FolderNodeItem: React.FC<{ node: FolderNodeType; level?: number }> 
     e.preventDefault();
     if (editValue.trim() && editValue !== node.folder.name) {
       console.log(`Renaming folder${node.folder.collectionId} ${node.folder.id} to "${editValue}"`);
-      await renameFolder(node.folder.collectionId,node.folder.id, editValue);
+      await renameFolder(node.folder.collectionId, node.folder.id, editValue);
     }
     setEditingId(null);
   };
@@ -128,7 +130,7 @@ export const FolderNodeItem: React.FC<{ node: FolderNodeType; level?: number }> 
             </div>
 
             {/* Hover Actions (Options Dropdown) */}
-            <div className="opacity-0 group-hover:opacity-100 flex items-center transition-opacity pr-1" ref={menuRef}>
+            <div className="opacity-70 group-hover:opacity-100 flex items-center transition-opacity pr-1" ref={menuRef}>
               <div className="relative">
                 <button
                   onClick={(e) => {
@@ -157,6 +159,17 @@ export const FolderNodeItem: React.FC<{ node: FolderNodeType; level?: number }> 
                     >
                       <FilePlus className="w-3.5 h-3.5" />
                       Add Request
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAddingItem("ws");
+                        setIsMenuOpen(false);
+                        setIsOpen(true);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-text-secondary hover:bg-panel hover:text-text-primary transition-colors cursor-pointer"
+                    >
+                      <FilePlus className="w-3.5 h-3.5" />
+                      Add WebSocket
                     </button>
                     <button
                       onClick={() => {

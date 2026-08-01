@@ -47,6 +47,7 @@ pub async fn send_request(
     builder = apply_body(builder, &interpolated).await?;
 
     let started = Instant::now();
+    println!("{:?}", builder);
     let send_result = builder.send().await;
     let elapsed = started.elapsed();
 
@@ -133,7 +134,7 @@ fn build_client(settings: &AppSettings) -> AppResult<reqwest::Client> {
 /// Returns a copy of `request` with `{{variables}}` resolved in the URL,
 /// enabled header/param values, and the raw body. Disabled rows are left
 /// alone since they won't be sent anyway.
-fn interpolate_request(request: &ApiRequest, vars: &HashMap<String, String>) -> ApiRequest {
+pub fn interpolate_request(request: &ApiRequest, vars: &HashMap<String, String>) -> ApiRequest {
     let mut next = request.clone();
 
     next.url = db::environments::interpolate(&next.url, vars);
@@ -157,7 +158,21 @@ fn interpolate_request(request: &ApiRequest, vars: &HashMap<String, String>) -> 
 fn build_url(request: &ApiRequest) -> Result<reqwest::Url, url::ParseError> {
     let mut url = reqwest::Url::parse(&request.url)?;
 
-    {
+    let mut api_key_query = None;
+    if request.auth.auth_type == AuthType::ApiKey {
+        if let Some(api_key) = &request.auth.api_key {
+            if api_key.add_to == ApiKeyTarget::Query && !api_key.key.is_empty() {
+                api_key_query = Some((api_key.key.clone(), api_key.value.clone()));
+            }
+        }
+    }
+
+    let has_params = request
+        .params
+        .iter()
+        .any(|r| r.enabled && !r.key.is_empty());
+
+    if has_params || api_key_query.is_some() {
         let mut pairs = url.query_pairs_mut();
         for row in request
             .params
@@ -166,14 +181,8 @@ fn build_url(request: &ApiRequest) -> Result<reqwest::Url, url::ParseError> {
         {
             pairs.append_pair(&row.key, &row.value);
         }
-    }
-
-    if request.auth.auth_type == AuthType::ApiKey {
-        if let Some(api_key) = &request.auth.api_key {
-            if api_key.add_to == ApiKeyTarget::Query && !api_key.key.is_empty() {
-                url.query_pairs_mut()
-                    .append_pair(&api_key.key, &api_key.value);
-            }
+        if let Some((k, v)) = api_key_query {
+            pairs.append_pair(&k, &v);
         }
     }
 
@@ -233,7 +242,7 @@ async fn apply_body(
     request: &ApiRequest,
 ) -> AppResult<reqwest::RequestBuilder> {
     let mode = request.body.mode.unwrap_or(BodyMode::Json);
-
+    println!("{:?}", request.body.raw);
     match mode {
         BodyMode::Json => {
             if let Some(raw) = &request.body.raw {
@@ -298,7 +307,7 @@ async fn apply_body(
             builder = builder.multipart(form);
         }
     }
-
+    println!("{:#?}", builder);
     Ok(builder)
 }
 

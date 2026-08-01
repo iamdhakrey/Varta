@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import RequestEditor from "./components/RequestEditor";
 import ResponsePanel from "./components/ResponsePanel";
+import WebSocketPanel from "./components/WebSocketPanel";
 import CommandPalette from "./components/CommandPalette";
 import HistoryDrawer from "./components/HistoryDrawer";
 import { useVartaStore } from "./store";
@@ -8,7 +10,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useResizablePanel } from "./hooks/useResizablePanel";
 import { useMobileDetect } from "./hooks/useMobileDetect";
 import { SettingsPanel } from "./components/SettingsPanel";
-import { EnvironmentModal } from "./components/EnvironmentModal"; // Ensure you import the Modal, not the raw Editor
+import { EnvironmentModal } from "./components/EnvironmentModal";
 import { Menu } from "lucide-react";
 
 export default function App() {
@@ -22,6 +24,20 @@ export default function App() {
 
   const isSidebarOpen = useVartaStore((s) => s.isSidebarOpen);
   const toggleSidebar = useVartaStore((s) => s.toggleSidebar);
+  const initWsListener = useVartaStore((s) => s.initWsListener);
+
+  // Detect if active tab is a WebSocket tab
+  const isWsTab = activeTab?.request.url
+    ? /^wss?:\/\//i.test(activeTab.request.url.trim())
+    : false;
+
+  // Initialize Tauri WS event listeners on mount
+  useEffect(() => {
+    const cleanup = initWsListener();
+    return () => {
+      cleanup.then((fn) => fn());
+    };
+  }, [initWsListener]);
 
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-bg text-text-primary">
@@ -81,17 +97,24 @@ export default function App() {
               />
             )}
 
-            {/* Response panel */}
+            {/* Response / WebSocket panel */}
             <div
               style={isMobile ? { height: "45vh" } : { height }}
               className="shrink-0 border-t border-border bg-bg"
             >
-              <ResponsePanel
-                response={activeTab.response}
-                isSending={activeTab.isSending}
-                error={activeTab.error}
-                isMobile={isMobile}
-              />
+              {isWsTab ? (
+                <WebSocketPanel
+                  tab={activeTab}
+                  isMobile={isMobile}
+                />
+              ) : (
+                <ResponsePanel
+                  response={activeTab.response}
+                  isSending={activeTab.isSending}
+                  error={activeTab.error}
+                  isMobile={isMobile}
+                />
+              )}
             </div>
           </>
         )}

@@ -66,11 +66,10 @@ export const EnvironmentSelector: React.FC = () => {
                 setActiveEnvironment(null);
                 setIsOpen(false);
               }}
-              className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-panel hover:text-text-primary transition-colors cursor-pointer ${
-                !activeEnvironmentId
+              className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-panel hover:text-text-primary transition-colors cursor-pointer ${!activeEnvironmentId
                   ? "text-text-primary bg-panel/40"
                   : "text-text-secondary"
-              }`}
+                }`}
             >
               <div className="w-4 flex justify-center shrink-0">
                 {!activeEnvironmentId && (
@@ -84,11 +83,10 @@ export const EnvironmentSelector: React.FC = () => {
             {environments.map((env) => (
               <div
                 key={env.environment.id}
-                className={`group flex items-center justify-between px-3 py-1.5 mx-1 my-0.5 rounded-md text-sm text-text-secondary hover:bg-panel hover:text-text-primary transition-all duration-150 ${
-                  env.environment.id === activeEnvironmentId
+                className={`group flex items-center justify-between px-3 py-1.5 mx-1 my-0.5 rounded-md text-sm text-text-secondary hover:bg-panel hover:text-text-primary transition-all duration-150 ${env.environment.id === activeEnvironmentId
                     ? "bg-panel/40 text-text-primary"
                     : ""
-                }`}
+                  }`}
               >
                 <>
                   <button
@@ -106,7 +104,7 @@ export const EnvironmentSelector: React.FC = () => {
                     )}
                     <span className="truncate">{env.environment.name}</span>
                   </button>
-                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                  <div className="opacity-70 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                     <button
                       onClick={() => {
                         useVartaStore.getState().openEnvEditor();

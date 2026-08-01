@@ -11,9 +11,8 @@ export default function EmptyState({ isMobile = false }: EmptyStateProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 text-center px-4">
       <div
-        className={`flex items-center justify-center rounded-2xl bg-brand-gradient ${
-          isMobile ? "h-12 w-12" : "h-16 w-16"
-        }`}
+        className={`flex items-center justify-center rounded-2xl bg-brand-gradient ${isMobile ? "h-12 w-12" : "h-16 w-16"
+          }`}
       >
         <svg
           width={isMobile ? "24" : "32"}
@@ -35,17 +34,15 @@ export default function EmptyState({ isMobile = false }: EmptyStateProps) {
       <div className={`flex gap-2 ${isMobile ? "flex-col w-full max-w-[260px]" : ""}`}>
         <button
           onClick={newTab}
-          className={`flex items-center justify-center gap-1.5 rounded-md bg-primary text-sm font-medium text-white hover:bg-primary-hover ${
-            isMobile ? "w-full px-4 py-2.5" : "px-4 py-2"
-          }`}
+          className={`flex items-center justify-center gap-1.5 rounded-md bg-primary text-sm font-medium text-white hover:bg-primary-hover ${isMobile ? "w-full px-4 py-2.5" : "px-4 py-2"
+            }`}
         >
           <Plus size={14} />
           Create request
         </button>
         <button
-          className={`flex items-center justify-center gap-1.5 rounded-md border border-border text-sm text-text-secondary hover:bg-panel-raised ${
-            isMobile ? "w-full px-4 py-2.5" : "px-4 py-2"
-          }`}
+          className={`flex items-center justify-center gap-1.5 rounded-md border border-border text-sm text-text-secondary hover:bg-panel-raised ${isMobile ? "w-full px-4 py-2.5" : "px-4 py-2"
+            }`}
         >
           <Upload size={14} />
           Import collection

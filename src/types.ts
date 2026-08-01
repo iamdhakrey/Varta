@@ -1,25 +1,19 @@
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD";
+export type HttpMethod =
+  "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "HEAD" | "WS";
 
 export type AuthType = "none" | "basic" | "bearer" | "apiKey";
 
 export type BodyMode =
-  | "json"
-  | "form-data"
-  | "urlencoded"
-  | "raw"
-  | "multipart";
-
-
-
+  "json" | "form-data" | "urlencoded" | "raw" | "multipart";
 
 export interface AppSettings {
-    followRedirects: boolean;
-    maxRedirects: number;
-    verifySslCertificates: boolean;
-    timeoutMs: number;
-    userAgent: string;
-    proxyUrl: string | null;
-  }
+  followRedirects: boolean;
+  maxRedirects: number;
+  verifySslCertificates: boolean;
+  timeoutMs: number;
+  userAgent: string;
+  proxyUrl: string | null;
+}
 
 export interface KeyValueRow {
   id: string;
@@ -122,6 +116,25 @@ export interface ApiResponse {
   body: string;
 }
 
+// ── WebSocket types ──────────────────────────────────────────────────
+
+/** Runtime log entry — ephemeral, lives only in memory. */
+export interface WsMessage {
+  connectionId: string;
+  direction: "sent" | "received" | "closed";
+  data: string;
+  timestamp: string;
+}
+
+/** A saved message template — persisted to YAML via the backend. */
+export interface WsSavedMessage {
+  id: string;
+  name: string;
+  data: string;
+}
+
+export type WsStatus = "disconnected" | "connecting" | "connected";
+
 export interface RequestTab {
   id: string;
   request: ApiRequest;
@@ -129,8 +142,12 @@ export interface RequestTab {
   response?: ApiResponse;
   isSending: boolean;
   error?: string;
+  // WebSocket state (only used when the URL starts with ws:// or wss://)
+  wsConnectionId?: string;
+  wsMessages: WsMessage[];
+  wsStatus: WsStatus;
+  wsSavedMessages: WsSavedMessage[];
 }
-
 
 export interface Workspace {
   id: string;
@@ -165,7 +182,6 @@ export interface CollectionTree {
   requests: ApiRequest[];
 }
 
-
 export interface EnvironmentVariable {
   id: string;
   environmentid: string;
@@ -195,7 +211,7 @@ export interface EnvironmentWithVariables {
 export interface WorkspaceStore {
   environments: EnvironmentWithVariables[];
   workspaces: Workspace[];
-  collectionTrees: CollectionTree[],
+  collectionTrees: CollectionTree[];
   activeWorkspaceId: string | null;
   activeEnvironmentId: string | null;
   isLoading: boolean;
@@ -219,21 +235,39 @@ export interface WorkspaceStore {
   // removeRequestFromCollection: (collectionId: string, requestId: string) => Promise<void>;
 
   // Folders
-  createFolder: (collectionId: string, parentFolderId: string | null, name: string) => Promise<void>;
-  renameFolder: (collectionId: string,folderId: string, name: string) => Promise<void>;
+  createFolder: (
+    collectionId: string,
+    parentFolderId: string | null,
+    name: string,
+  ) => Promise<void>;
+  renameFolder: (
+    collectionId: string,
+    folderId: string,
+    name: string,
+  ) => Promise<void>;
   deleteFolder: (folderId: string) => Promise<void>;
 
-
   // Request
-  createRequest: (collectionId: string, folderId: string | null, name: string) => Promise<void>;
+  createRequest: (
+    collectionId: string,
+    folderId: string | null,
+    name: string,
+  ) => Promise<void>;
+  createWs: (
+    collectionId: string,
+    folderId: string | null,
+    name: string,
+  ) => Promise<void>;
   // updateRequest: (requestId: string, updatedRequest: Partial<ApiRequest>) => Promise<void>;
   deleteRequest: (requestId: string) => Promise<void>;
 
-
   fetchEnvironments: (workspaceid: string) => Promise<void>;
-    createEnvironment: (workspaceid: string, name: string) => Promise<void>;
-    renameEnvironment: (environmentid: string, name: string) => Promise<void>;
-    deleteEnvironment: (environmentid: string) => Promise<void>;
-    saveVariables: (environmentid: string, variables: EnvironmentVariable[]) => Promise<void>;
-    setActiveEnvironment: (id: string | null) => Promise<void>;
+  createEnvironment: (workspaceid: string, name: string) => Promise<void>;
+  renameEnvironment: (environmentid: string, name: string) => Promise<void>;
+  deleteEnvironment: (environmentid: string) => Promise<void>;
+  saveVariables: (
+    environmentid: string,
+    variables: EnvironmentVariable[],
+  ) => Promise<void>;
+  setActiveEnvironment: (id: string | null) => Promise<void>;
 }

@@ -19,6 +19,12 @@ pub enum AppError {
     #[error("plugin script error: {0}")]
     Script(String),
 
+    #[error("websocket error: {0}")]
+    WebSocket(String),
+
+    #[error("tungstenite error: {0}")]
+    Tungstenite(#[from] tokio_tungstenite::tungstenite::Error),
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 

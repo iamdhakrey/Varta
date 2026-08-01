@@ -207,9 +207,8 @@ const UrlAutocompleteInput: React.FC<UrlInputProps> = ({
               <button
                 key={v.id}
                 onClick={() => insertSuggestion(v.key)}
-                className={`flex w-full flex-col px-3 py-1.5 text-left rounded-sm cursor-pointer transition-colors ${
-                  index === selectedIndex ? "bg-primary/20" : "hover:bg-panel"
-                }`}
+                className={`flex w-full flex-col px-3 py-1.5 text-left rounded-sm cursor-pointer transition-colors ${index === selectedIndex ? "bg-primary/20" : "hover:bg-panel"
+                  }`}
               >
                 <span className="text-sm font-mono text-success">{v.key}</span>
                 <span className="text-xs text-text-muted truncate">
@@ -229,92 +228,160 @@ interface RequestBarProps {
   isMobile?: boolean;
 }
 
+/** Returns true if the URL looks like a WebSocket endpoint. */
+function isWsUrl(url: string): boolean {
+  const lower = url.trim().toLowerCase();
+  return lower.startsWith("ws://") || lower.startsWith("wss://");
+}
+
 export default function RequestBar({ tab, isMobile }: RequestBarProps) {
   const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
   const sendActiveRequest = useVartaStore((s) => s.sendActiveRequest);
+  const connectWebSocket = useVartaStore((s) => s.connectWebSocket);
+  const disconnectWebSocket = useVartaStore((s) => s.disconnectWebSocket);
+
+  const isWs = isWsUrl(tab.request.url);
+  const wsConnected = tab.wsStatus === "connected";
+  const wsConnecting = tab.wsStatus === "connecting";
+  // method set to us if iswsurl true
+  const method = isWs ? "WS" : tab.request.method;
+
+  // console.log(tab.request);
+  // -- WS action button ---------------------------------------------------
+  const renderWsButton = () => {
+    if (wsConnected) {
+      return (
+        <button
+          onClick={disconnectWebSocket}
+          className="rounded-md bg-error/90 px-5 py-1.5 text-sm font-medium text-white shadow-panel hover:bg-error transition-colors"
+        >
+          Disconnect
+        </button>
+      );
+    }
+    return (
+      <button
+        onClick={connectWebSocket}
+        disabled={wsConnecting || !tab.request.url.trim()}
+        className="rounded-md bg-success/90 px-5 py-1.5 text-sm font-medium text-white shadow-panel hover:bg-success disabled:opacity-60 transition-colors"
+      >
+        {wsConnecting ? "Connecting…" : "Connect"}
+      </button>
+    );
+  };
+
+  // -- WS badge instead of method selector --------------------------------
+  const renderWsBadge = () => (
+    <span className="input-shell flex items-center gap-1.5 font-semibold text-success px-3 py-1.5 text-sm cursor-default select-none">
+      <span
+        className={`inline-block h-2 w-2 rounded-full ${wsConnected ? "bg-success animate-pulse" : "bg-success/50"}`}
+      />
+      WS
+    </span>
+  );
 
   if (isMobile) {
     return (
       <div className="flex flex-col gap-2 px-3 py-2.5">
-        {/* Row 1: Method select + Send button */}
+        {/* Row 1: Method select (or WS badge) + action button */}
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <select
-              value={tab.request.method}
-              onChange={(e) =>
-                updateActiveRequest({ method: e.target.value as HttpMethod })
-              }
-              className={`input-shell appearance-none pr-7 font-semibold ${MethodStyles[tab.request.method as HttpMethod]}`}
-            >
-              {methods.map((m) => (
-                <option key={m} value={m} className="bg-panel text-text-primary">
-                  {m}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              size={13}
-              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
-            />
-          </div>
+          {isWs ? (
+            renderWsBadge()
+          ) : (
+            <div className="relative">
+              <select
+                value={method}
+                onChange={(e) =>
+                  updateActiveRequest({ method: e.target.value as HttpMethod })
+                }
+                className={`input-shell appearance-none pr-7 font-semibold ${MethodStyles[method as HttpMethod]}`}
+              >
+                {methods.map((m) => (
+                  <option
+                    key={m}
+                    value={m}
+                    className="bg-panel text-text-primary"
+                  >
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={13}
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
+              />
+            </div>
+          )}
 
-          <button
-            onClick={sendActiveRequest}
-            disabled={tab.isSending}
-            className="rounded-md bg-brand-gradient px-5 py-1.5 text-sm font-medium text-white shadow-panel hover:opacity-90 disabled:opacity-60 transition-opacity"
-          >
-            {tab.isSending ? "Sending…" : "Send"}
-          </button>
+          {isWs ? (
+            renderWsButton()
+          ) : (
+            <button
+              onClick={sendActiveRequest}
+              disabled={tab.isSending}
+              className="rounded-md bg-brand-gradient px-5 py-1.5 text-sm font-medium text-white shadow-panel hover:opacity-90 disabled:opacity-60 transition-opacity"
+            >
+              {tab.isSending ? "Sending…" : "Send"}
+            </button>
+          )}
         </div>
 
         {/* Row 2: URL input (full width) */}
         <UrlAutocompleteInput
           url={tab.request.url}
           onChange={(url) => updateActiveRequest({ url })}
-          onEnter={sendActiveRequest}
-          disabled={tab.isSending}
+          onEnter={isWs ? connectWebSocket : sendActiveRequest}
+          disabled={tab.isSending || wsConnected}
         />
       </div>
     );
   }
 
-  // Desktop layout — unchanged
+  // Desktop layout
   return (
     <div className="flex items-center gap-2 px-4 py-3">
-      <div className="relative">
-        <select
-          value={tab.request.method}
-          onChange={(e) =>
-            updateActiveRequest({ method: e.target.value as HttpMethod })
-          }
-          className={`input-shell appearance-none pr-7 font-semibold ${MethodStyles[tab.request.method as HttpMethod]}`}
-        >
-          {methods.map((m) => (
-            <option key={m} value={m} className="bg-panel text-text-primary">
-              {m}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          size={13}
-          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
-        />
-      </div>
+      {isWs ? (
+        renderWsBadge()
+      ) : (
+        <div className="relative">
+          <select
+            value={tab.request.method}
+            onChange={(e) =>
+              updateActiveRequest({ method: e.target.value as HttpMethod })
+            }
+            className={`input-shell appearance-none pr-7 font-semibold ${MethodStyles[tab.request.method as HttpMethod]}`}
+          >
+            {methods.map((m) => (
+              <option key={m} value={m} className="bg-panel text-text-primary">
+                {m}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={13}
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
+          />
+        </div>
+      )}
 
       <UrlAutocompleteInput
         url={tab.request.url}
         onChange={(url) => updateActiveRequest({ url })}
-        onEnter={sendActiveRequest}
-        disabled={tab.isSending}
+        onEnter={isWs ? connectWebSocket : sendActiveRequest}
+        disabled={tab.isSending || wsConnected}
       />
 
-      <button
-        onClick={sendActiveRequest}
-        disabled={tab.isSending}
-        className="rounded-md bg-brand-gradient px-5 py-1.5 text-sm font-medium text-white shadow-panel hover:opacity-90 disabled:opacity-60 transition-opacity"
-      >
-        {tab.isSending ? "Sending…" : "Send"}
-      </button>
+      {isWs ? (
+        renderWsButton()
+      ) : (
+        <button
+          onClick={sendActiveRequest}
+          disabled={tab.isSending}
+          className="rounded-md bg-brand-gradient px-5 py-1.5 text-sm font-medium text-white shadow-panel hover:opacity-90 disabled:opacity-60 transition-opacity"
+        >
+          {tab.isSending ? "Sending…" : "Send"}
+        </button>
+      )}
     </div>
   );
 }

@@ -4,9 +4,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::error::AppResult;
-use crate::models::{
-    ActiveState, AppSettings, Theme, ThemeTokens, Workspace,
-};
+use crate::models::{ActiveState, AppSettings, Theme, ThemeTokens, Workspace};
 
 pub mod app_state;
 pub mod collections;
@@ -16,6 +14,7 @@ pub mod plugins;
 pub mod settings;
 pub mod themes;
 pub mod workspaces;
+pub mod ws_messages;
 
 // ---------------------------------------------------------------------------
 // DataDir — root handle for all YAML file I/O
@@ -104,14 +103,15 @@ impl DataDir {
             .join("folders")
     }
 
-    pub fn folder_path(
-        &self,
-        workspace_id: &str,
-        collection_id: &str,
-        folder_id: &str,
-    ) -> PathBuf {
+    pub fn folder_path(&self, workspace_id: &str, collection_id: &str, folder_id: &str) -> PathBuf {
         self.folders_dir(workspace_id, collection_id)
             .join(format!("{folder_id}.yaml"))
+    }
+
+    /// Per-request YAML file that stores the user's saved WS message
+    /// templates.  Lives at `<data>/ws_messages/<request_id>.yaml`.
+    pub fn ws_saved_messages_path(&self, request_id: &str) -> PathBuf {
+        self.root.join("ws_messages").join(format!("{request_id}.yaml"))
     }
 }
 

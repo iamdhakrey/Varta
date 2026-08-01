@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { ApiRequest, AppSettings, CollectionTree, EnvironmentVariable, EnvironmentWithVariables, HttpMethod, RequestTab } from "./types";
+import { ApiRequest, AppSettings, CollectionTree, EnvironmentVariable, EnvironmentWithVariables, HttpMethod, RequestTab, WsMessage, WsSavedMessage } from "./types";
 import { invoke } from "@tauri-apps/api/core";
 import { WorkspaceStore, Workspace } from "./types";
 import { sendNativeRequest } from "./services/rest";
-// import { collections } from "./data/mock";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 
 interface VartaState {
   tabs: RequestTab[];
@@ -30,6 +30,16 @@ interface VartaState {
 
   openEnvEditor: () => void;
   closeEnvEditor: () => void;
+
+  // WebSocket actions
+  connectWebSocket: () => Promise<void>;
+  disconnectWebSocket: () => Promise<void>;
+  sendWsMessage: (message: string) => Promise<void>;
+  addWsMessage: (msg: WsMessage) => void;
+  loadSavedMessages: (requestId: string) => Promise<void>;
+  addSavedMessage: (requestId: string, name: string, data: string) => Promise<void>;
+  deleteSavedMessage: (requestId: string, messageId: string) => Promise<void>;
+  initWsListener: () => Promise<UnlistenFn>;
 }
 
 let tabCounter = 0;
@@ -78,6 +88,9 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       request,
       isDirty: false,
       isSending: false,
+      wsMessages: [],
+      wsStatus: "disconnected",
+      wsSavedMessages: [],
     };
     set((s) => ({ tabs: [...s.tabs, tab], activeTabId: tab.id }));
   },
@@ -89,6 +102,9 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       request,
       isDirty: false,
       isSending: false,
+      wsMessages: [],
+      wsStatus: "disconnected",
+      wsSavedMessages: [],
     };
     set((s) => ({ tabs: [...s.tabs, tab], activeTabId: tab.id }));
   },
@@ -198,6 +214,175 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       console.error("Failed to save request:", error);
       // Handle error toast here
     }
+  },
+
+  // ── WebSocket actions ──────────────────────────────────────────────
+
+  connectWebSocket: async () => {
+    const { activeTabId, tabs } = get();
+    if (!activeTabId) return;
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (!tab) return;
+
+    // Set connecting state
+    set((s) => ({
+      tabs: s.tabs.map((t) =>
+        t.id === activeTabId ? { ...t, wsStatus: "connecting" as const, wsMessages: [] } : t,
+      ),
+    }));
+
+    try {
+      // Build headers from the request
+      const headers = tab.request.headers
+        .filter((h) => h.enabled && h.key)
+        .map((h) => [h.key, h.value] as [string, string]);
+
+      const connectionId = await invoke<string>("ws_connect", {
+        url: tab.request.url,
+        headers,
+      });
+
+      set((s) => ({
+        tabs: s.tabs.map((t) =>
+          t.id === activeTabId
+            ? { ...t, wsConnectionId: connectionId, wsStatus: "connected" as const }
+            : t,
+        ),
+      }));
+    } catch (err) {
+      console.error("WS connect failed:", err);
+      set((s) => ({
+        tabs: s.tabs.map((t) =>
+          t.id === activeTabId
+            ? { ...t, wsStatus: "disconnected" as const, error: String(err) }
+            : t,
+        ),
+      }));
+    }
+  },
+
+  disconnectWebSocket: async () => {
+    const { activeTabId, tabs } = get();
+    if (!activeTabId) return;
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (!tab?.wsConnectionId) return;
+
+    try {
+      await invoke("ws_disconnect", { connectionId: tab.wsConnectionId });
+    } catch (err) {
+      console.error("WS disconnect failed:", err);
+    }
+    set((s) => ({
+      tabs: s.tabs.map((t) =>
+        t.id === activeTabId
+          ? { ...t, wsConnectionId: undefined, wsStatus: "disconnected" as const }
+          : t,
+      ),
+    }));
+  },
+
+  sendWsMessage: async (message: string) => {
+    const { activeTabId, tabs } = get();
+    if (!activeTabId) return;
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (!tab?.wsConnectionId) return;
+
+    try {
+      await invoke("ws_send", {
+        connectionId: tab.wsConnectionId,
+        message,
+      });
+    } catch (err) {
+      console.error("WS send failed:", err);
+    }
+  },
+
+  addWsMessage: (msg: WsMessage) => {
+    set((s) => ({
+      tabs: s.tabs.map((t) => {
+        if (t.wsConnectionId === msg.connectionId) {
+          // If it's a close event, also update status
+          if (msg.direction === "closed") {
+            return {
+              ...t,
+              wsMessages: [...t.wsMessages, msg],
+              wsStatus: "disconnected" as const,
+              wsConnectionId: undefined,
+            };
+          }
+          return { ...t, wsMessages: [...t.wsMessages, msg] };
+        }
+        return t;
+      }),
+    }));
+  },
+
+  loadSavedMessages: async (requestId: string) => {
+    try {
+      const messages = await invoke<WsSavedMessage[]>("ws_list_saved_messages", { requestId });
+      set((s) => ({
+        tabs: s.tabs.map((t) =>
+          t.request.id === requestId ? { ...t, wsSavedMessages: messages } : t,
+        ),
+      }));
+    } catch (err) {
+      console.error("Failed to load saved messages:", err);
+    }
+  },
+
+  addSavedMessage: async (requestId: string, name: string, data: string) => {
+    try {
+      const msg = await invoke<WsSavedMessage>("ws_add_saved_message", { requestId, name, data });
+      set((s) => ({
+        tabs: s.tabs.map((t) =>
+          t.request.id === requestId
+            ? { ...t, wsSavedMessages: [...t.wsSavedMessages, msg] }
+            : t,
+        ),
+      }));
+    } catch (err) {
+      console.error("Failed to add saved message:", err);
+    }
+  },
+
+  deleteSavedMessage: async (requestId: string, messageId: string) => {
+    try {
+      await invoke("ws_delete_saved_message", { requestId, messageId });
+      set((s) => ({
+        tabs: s.tabs.map((t) =>
+          t.request.id === requestId
+            ? { ...t, wsSavedMessages: t.wsSavedMessages.filter((m) => m.id !== messageId) }
+            : t,
+        ),
+      }));
+    } catch (err) {
+      console.error("Failed to delete saved message:", err);
+    }
+  },
+
+  initWsListener: async () => {
+    const unlisten = await listen<WsMessage>("ws://message", (event) => {
+      get().addWsMessage(event.payload);
+    });
+    // Also listen for status changes (disconnect from server side)
+    const unlistenStatus = await listen<{ connectionId: string; status: string }>(
+      "ws://status",
+      (event) => {
+        if (event.payload.status === "disconnected") {
+          set((s) => ({
+            tabs: s.tabs.map((t) =>
+              t.wsConnectionId === event.payload.connectionId
+                ? { ...t, wsConnectionId: undefined, wsStatus: "disconnected" as const }
+                : t,
+            ),
+          }));
+        }
+      },
+    );
+    return () => {
+      unlisten();
+      unlistenStatus();
+    };
   },
 }));
 
@@ -456,6 +641,19 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
+  createWs: async (collectionId: string, folderId: string | null, name: string) => {
+    set({ isLoadingCollections: true });
+    try {
+      console.log("Creating WS request:", name, "in collection:", collectionId, "folder:", folderId);
+      await invoke("create_ws_request", { collectionid: collectionId, folderid: folderId, name: name });
+      await get().fetchCollections(); // Refresh the collection list after request creation
+      set({ isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error creating WS request:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
   deleteRequest: async (requestId: string) => {
     set({ isLoadingCollections: true });
     try {
@@ -551,6 +749,7 @@ export const MethodStyles: Record<HttpMethod, string> = {
   DELETE: "text-error",
   OPTIONS: "text-text-muted",
   HEAD: "text-text-muted",
+  WS: "text-method-ws",
 };
 
 
