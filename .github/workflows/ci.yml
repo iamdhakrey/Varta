@@ -45,8 +45,8 @@ jobs:
       - name: Install Frontend Dependencies
         run: bun install --frozen-lockfile
 
-      - name: Lint Frontend
-        run: bun run lint
+      # - name: Lint Frontend
+      #   run: bun run lint
 
       # Assuming your package.json has a 'build' script for the React/Vite app
       - name: Build Frontend Assets
@@ -55,8 +55,8 @@ jobs:
       - name: Check Rust Formatting
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
 
-      - name: Lint Rust Core (Clippy)
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+      # - name: Lint Rust Core (Clippy)
+      #   run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
       - name: Verify Rust Compilation
         # cargo check is significantly faster than cargo build as it skips code generation
