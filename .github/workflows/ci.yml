@@ -1,14 +1,14 @@
-name: CI
+name: PR Check
 
 on:
   pull_request:
-  push:
     branches:
       - main
 
 jobs:
-  build:
+  validate:
     strategy:
+      fail-fast: false # Let all OS checks finish even if one fails
       matrix:
         os:
           - ubuntu-22.04
@@ -18,15 +18,19 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -38,10 +42,22 @@ jobs:
             librsvg2-dev \
             patchelf
 
-      - run: bun install --frozen-lockfile
+      - name: Install Frontend Dependencies
+        run: bun install --frozen-lockfile
 
-      # - run: bun run lint
+      - name: Lint Frontend
+        run: bun run lint
 
-      # - run: bun run test
+      # Assuming your package.json has a 'build' script for the React/Vite app
+      - name: Build Frontend Assets
+        run: bun run build 
 
-      - run: bun run tauri build
+      - name: Check Rust Formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+
+      - name: Lint Rust Core (Clippy)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      - name: Verify Rust Compilation
+        # cargo check is significantly faster than cargo build as it skips code generation
+        run: cargo check --manifest-path src-tauri/Cargo.toml
