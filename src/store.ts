@@ -210,6 +210,7 @@ export const useVartaStore = create<VartaState>((set, get) => ({
           t.id === state.activeTabId ? { ...t, isDirty: false } : t
         )
       }));
+      useWorkspaceStore.getState().fetchCollections();
     } catch (error) {
       console.error("Failed to save request:", error);
       // Handle error toast here
