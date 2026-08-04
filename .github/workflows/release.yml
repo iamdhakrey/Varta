@@ -86,7 +86,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Checkout the exact tag created in Job 1
           ref: ${{ needs.bump-and-tag.outputs.tag }}
