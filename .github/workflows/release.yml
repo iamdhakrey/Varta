@@ -70,6 +70,7 @@ jobs:
   release:
     name: Build & Release
     needs: bump-and-tag # Wait for Job 1 to finish
+    environment: Production
     permissions:
       contents: write
     strategy:
