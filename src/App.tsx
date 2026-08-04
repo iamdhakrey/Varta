@@ -12,6 +12,7 @@ import { useMobileDetect } from "./hooks/useMobileDetect";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { EnvironmentModal } from "./components/EnvironmentModal";
 import { Menu } from "lucide-react";
+import { UpdaterOverlay } from "./components/UpdaterOverlay";
 
 export default function App() {
   useKeyboardShortcuts();
@@ -121,6 +122,7 @@ export default function App() {
       </div>
 
       {/* Global Overlays & Modals */}
+      <UpdaterOverlay />
       <HistoryDrawer isMobile={isMobile} />
       <CommandPalette isMobile={isMobile} />
       <SettingsPanel isMobile={isMobile} />
