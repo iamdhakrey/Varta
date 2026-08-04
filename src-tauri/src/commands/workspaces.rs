@@ -1,4 +1,9 @@
-use crate::{db, error::AppResult, models::{ActiveState, Workspace}, state::AppState};
+use crate::{
+    db,
+    error::AppResult,
+    models::{ActiveState, Workspace},
+    state::AppState,
+};
 use tauri::State;
 
 #[tauri::command]
