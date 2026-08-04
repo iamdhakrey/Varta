@@ -111,7 +111,9 @@ impl DataDir {
     /// Per-request YAML file that stores the user's saved WS message
     /// templates.  Lives at `<data>/ws_messages/<request_id>.yaml`.
     pub fn ws_saved_messages_path(&self, request_id: &str) -> PathBuf {
-        self.root.join("ws_messages").join(format!("{request_id}.yaml"))
+        self.root
+            .join("ws_messages")
+            .join(format!("{request_id}.yaml"))
     }
 }
 

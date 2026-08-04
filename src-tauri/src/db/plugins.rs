@@ -44,9 +44,7 @@ pub fn list_plugins(dd: &DataDir) -> AppResult<Vec<PluginRecord>> {
     Ok(records)
 }
 
-pub fn list_enabled_plugins_with_source(
-    dd: &DataDir,
-) -> AppResult<Vec<(PluginManifest, String)>> {
+pub fn list_enabled_plugins_with_source(dd: &DataDir) -> AppResult<Vec<(PluginManifest, String)>> {
     let entries: Vec<PluginEntry> = read_yaml_vec(&dd.plugins_path())?;
 
     let mut out = Vec::new();
