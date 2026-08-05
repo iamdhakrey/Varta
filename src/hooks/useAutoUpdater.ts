@@ -15,7 +15,7 @@ export function useAutoUpdater() {
                 if (!update) return;
 
                 const shouldInstall = await ask(
-                    `Varta ${update.version} is available.\n\nRelease notes:\n${update.body}\n\nInstall now?`,
+                    `Samvad ${update.version} is available.\n\nRelease notes:\n${update.body}\n\nInstall now?`,
                     { title: 'Update Available', kind: 'info' }
                 );
 

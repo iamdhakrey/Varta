@@ -37,6 +37,13 @@ pub async fn send_request(
 
     let interpolated = interpolate_request(&request, &env_vars);
 
+    // WebSocket requests should never go through the HTTP pipeline.
+    if interpolated.method == crate::models::HttpMethod::Ws {
+        return Err(AppError::Invalid(
+            "WebSocket requests cannot be sent via HTTP — use the WebSocket panel instead".into(),
+        ));
+    }
+
     let client = build_client(&settings)?;
     let url =
         build_url(&interpolated).map_err(|e| AppError::Invalid(format!("invalid URL: {e}")))?;

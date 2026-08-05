@@ -35,6 +35,7 @@ export default {
           put: "#F59E0B",
           patch: "#8B5CF6",
           delete: "#EF4444",
+          ws: "#10B981",
         },
       },
       borderRadius: {

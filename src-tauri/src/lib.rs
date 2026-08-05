@@ -109,5 +109,5 @@ pub fn run() {
             ws_delete_saved_message,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running varta application");
+        .expect("error while running Samvad application");
 }

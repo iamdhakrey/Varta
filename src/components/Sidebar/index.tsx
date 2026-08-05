@@ -41,15 +41,14 @@ export default function Sidebar({ isMobile, onClose }: SidebarProps) {
 
   return (
     <aside
-      className={`flex h-full shrink-0 flex-col border-r border-border bg-bg ${
-        isMobile ? "w-[85vw] max-w-[320px]" : "w-[280px]"
-      }`}
+      className={`flex h-full shrink-0 flex-col border-r border-border bg-bg ${isMobile ? "w-[85vw] max-w-[320px]" : "w-[280px]"
+        }`}
     >
       {/* Mobile close header */}
       {isMobile && (
         <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
           <span className="text-sm font-semibold bg-brand-gradient bg-clip-text text-transparent">
-            Varta
+            Samvad
           </span>
           <button
             onClick={onClose}

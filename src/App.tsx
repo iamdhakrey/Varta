@@ -28,9 +28,7 @@ export default function App() {
   const initWsListener = useVartaStore((s) => s.initWsListener);
 
   // Detect if active tab is a WebSocket tab
-  const isWsTab = activeTab?.request.url
-    ? /^wss?:\/\//i.test(activeTab.request.url.trim())
-    : false;
+  const isWsTab = activeTab?.request.method === "WS";
 
   // Initialize Tauri WS event listeners on mount
   useEffect(() => {

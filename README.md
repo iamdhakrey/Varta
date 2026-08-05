@@ -1,6 +1,6 @@
-# Varta (वार्ता)
+# Samvad (संवाद)
 
-A modern, lightweight HTTP client for testing and debugging APIs. Built with [Tauri](https://tauri.app/) and [React](https://react.dev/), Varta provides a native desktop experience for making HTTP requests with a clean, intuitive interface.
+A modern, lightweight HTTP client for testing and debugging APIs. Built with [Tauri](https://tauri.app/) and [React](https://react.dev/), Samvad provides a native desktop experience for making HTTP requests with a clean, intuitive interface.
 
 ## Features
 
@@ -50,8 +50,8 @@ A modern, lightweight HTTP client for testing and debugging APIs. Built with [Ta
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/iamdhakrey/varta.git
-   cd varta
+   git clone https://github.com/iamdhakrey/samvad.git
+   cd samvad
    ```
 
 2. **Install dependencies**
@@ -88,4 +88,4 @@ Contributions are welcome! Please follow these guidelines:
 
 ---
 
-**Varta** (वार्ता) means "conversation" in Hindi/Sanskrit, reflecting the ongoing dialogue between client and server.
+Samvad (संवाद) means "dialogue" or "conversation" in Hindi/Sanskrit, reflecting the ongoing dialogue between client and server.
