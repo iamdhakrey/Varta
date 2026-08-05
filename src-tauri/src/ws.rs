@@ -55,20 +55,25 @@ impl ServerCertVerifier for NoCertificateVerification {
             .supported_schemes()
     }
 }
-fn build_ws_client(_setting: &AppSettings) -> AppResult<Connector> {
+fn build_ws_client(setting: &AppSettings) -> AppResult<Connector> {
     let mut config = ClientConfig::builder()
         .with_root_certificates(rustls::RootCertStore::empty())
         .with_no_client_auth();
 
-    config
-        .dangerous()
-        .set_certificate_verifier(Arc::new(NoCertificateVerification));
+    if setting.verify_ssl_certificates {
+        config
+            .dangerous()
+            .set_certificate_verifier(Arc::new(NoCertificateVerification));
+    };
 
     // 3. Wrap it inside tokio_tungstenite's Connector enum
     let connector = Connector::Rustls(Arc::new(config));
     Ok(connector)
 }
 
+fn check_is_secure_ws(url: String) -> bool {
+    return url.starts_with("wss");
+}
 // -----------------------------------------------------------------------
 // Connect
 // -----------------------------------------------------------------------
@@ -106,18 +111,21 @@ pub async fn ws_connect(
     }
 
     let connector = build_ws_client(&settings)?;
+    let (ws_stream, _response) = if check_is_secure_ws(url.clone()) {
+        connect_async_tls_with_config(
+            url.clone(),
+            None,  // Use default WebSocketConfig
+            false, // Do not disable Nagle's algorithm
+            Some(connector),
+        )
+        .await
+        .map_err(|e| AppError::WebSocket(format!("TLS connection failed: {e}")))?
+    } else {
+        tokio_tungstenite::connect_async(request)
+            .await
+            .map_err(|e| AppError::WebSocket(format!("connection failed: {e}")))?
+    };
 
-    // let (ws_stream, _response) = tokio_tungstenite::connect_async(request)
-    //     .await
-    //     .map_err(|e| AppError::WebSocket(format!("connection failed: {e}")))?;
-
-    let (ws_stream, _response) = connect_async_tls_with_config(
-        url.clone(),
-        None,  // Use default WebSocketConfig
-        false, // Do not disable Nagle's algorithm
-        Some(connector),
-    )
-    .await?;
     let (mut write, mut read) = ws_stream.split();
 
     let connection_id = db::new_id();
