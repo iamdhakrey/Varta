@@ -3398,6 +3398,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "samvad"
+version = "0.2.2"
+dependencies = [
+ "chrono",
+ "futures-util",
+ "http",
+ "openssl",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-updater",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-tungstenite",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4944,32 +4970,6 @@ dependencies = [
  "js-sys",
  "serde_core",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "varta"
-version = "0.2.2"
-dependencies = [
- "chrono",
- "futures-util",
- "http",
- "openssl",
- "reqwest",
- "rustls",
- "serde",
- "serde_json",
- "serde_yaml",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-updater",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite",
- "url",
- "uuid",
 ]
 
 [[package]]

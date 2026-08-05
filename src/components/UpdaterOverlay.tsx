@@ -9,7 +9,7 @@ export function UpdaterOverlay() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="w-96 rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800">
                 <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-                    Updating Varta...
+                    Updating Samvad...
                 </h3>
 
                 {error ? (

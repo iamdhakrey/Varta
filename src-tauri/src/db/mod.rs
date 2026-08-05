@@ -191,7 +191,7 @@ pub fn init_data_dir(data_dir: &Path) -> AppResult<DataDir> {
     if !dd.themes_path().exists() {
         let varta_dark = Theme {
             id: "varta-dark".to_string(),
-            name: "Varta Dark".to_string(),
+            name: "Samvad Dark".to_string(),
             is_builtin: true,
             tokens: ThemeTokens {
                 color_bg: "#0D1117".to_string(),
