@@ -227,6 +227,9 @@ pub fn init_data_dir(data_dir: &Path) -> AppResult<DataDir> {
         write_yaml(&dd.app_state_path(), &state)?;
     }
 
+    // -- Migrations ----------------------------------------------------------
+    migrate_ws_method(&dd);
+
     Ok(dd)
 }
 
@@ -240,4 +243,76 @@ pub fn now_iso() -> String {
 
 pub fn new_id() -> String {
     uuid::Uuid::new_v4().to_string()
+}
+
+// ---------------------------------------------------------------------------
+// Migration: fix existing WS requests that have method GET + ws:// URL
+// ---------------------------------------------------------------------------
+
+/// Scans all request YAML files and updates any that have `method: GET`
+/// with a `ws://` or `wss://` URL to `method: WS`. Runs once (uses a
+/// marker file to avoid re-scanning on every startup).
+fn migrate_ws_method(dd: &DataDir) {
+    use crate::models::ApiRequest;
+
+    let marker = dd.root().join(".migration_ws_method_done");
+    if marker.exists() {
+        return;
+    }
+
+    let workspaces_dir = dd.workspaces_dir();
+    if !workspaces_dir.exists() {
+        // Nothing to migrate
+        let _ = std::fs::write(&marker, "done");
+        return;
+    }
+
+    let mut updated = 0u32;
+
+    if let Ok(ws_entries) = std::fs::read_dir(&workspaces_dir) {
+        for ws_entry in ws_entries.flatten() {
+            if !ws_entry.path().is_dir() {
+                continue;
+            }
+            let collections_dir = ws_entry.path().join("collections");
+            if !collections_dir.exists() {
+                continue;
+            }
+            if let Ok(col_entries) = std::fs::read_dir(&collections_dir) {
+                for col_entry in col_entries.flatten() {
+                    let requests_dir = col_entry.path().join("requests");
+                    if !requests_dir.exists() {
+                        continue;
+                    }
+                    if let Ok(req_entries) = std::fs::read_dir(&requests_dir) {
+                        for req_entry in req_entries.flatten() {
+                            let path = req_entry.path();
+                            if path.extension().and_then(|e| e.to_str()) != Some("yaml") {
+                                continue;
+                            }
+                            // Try to read and fix the request
+                            if let Ok(mut req) = read_yaml::<ApiRequest>(&path) {
+                                let url_lower = req.url.trim().to_lowercase();
+                                if req.method == crate::models::HttpMethod::Get
+                                    && (url_lower.starts_with("ws://")
+                                        || url_lower.starts_with("wss://"))
+                                {
+                                    req.method = crate::models::HttpMethod::Ws;
+                                    if write_yaml(&path, &req).is_ok() {
+                                        updated += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if updated > 0 {
+        println!("[migration] Updated {updated} WS request(s) from GET to WS method");
+    }
+
+    let _ = std::fs::write(&marker, "done");
 }

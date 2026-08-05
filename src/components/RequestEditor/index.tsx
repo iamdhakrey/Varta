@@ -26,10 +26,6 @@ const WS_SUB_TABS: { id: SubTab; label: string }[] = [
   { id: "saved", label: "Saved" },
 ];
 
-function isWsUrl(url: string): boolean {
-  const lower = url.trim().toLowerCase();
-  return lower.startsWith("ws://") || lower.startsWith("wss://");
-}
 
 function RequestPanel({
   tab,
@@ -42,7 +38,7 @@ function RequestPanel({
   const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
   const saveActiveRequest = useVartaStore((s) => s.saveActiveRequest);
 
-  const isWs = isWsUrl(tab.request.url);
+  const isWs = tab.request.method === "WS";
   const visibleTabs = isWs ? WS_SUB_TABS : HTTP_SUB_TABS;
 
   // If the current sub-tab is hidden (e.g. "body" while in WS mode), reset.

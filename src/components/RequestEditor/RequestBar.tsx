@@ -11,6 +11,7 @@ const methods: HttpMethod[] = [
   "DELETE",
   "OPTIONS",
   "HEAD",
+  // "WS",
 ];
 
 interface UrlInputProps {
@@ -228,23 +229,41 @@ interface RequestBarProps {
   isMobile?: boolean;
 }
 
-/** Returns true if the URL looks like a WebSocket endpoint. */
-function isWsUrl(url: string): boolean {
-  const lower = url.trim().toLowerCase();
-  return lower.startsWith("ws://") || lower.startsWith("wss://");
-}
-
 export default function RequestBar({ tab, isMobile }: RequestBarProps) {
   const updateActiveRequest = useVartaStore((s) => s.updateActiveRequest);
   const sendActiveRequest = useVartaStore((s) => s.sendActiveRequest);
   const connectWebSocket = useVartaStore((s) => s.connectWebSocket);
   const disconnectWebSocket = useVartaStore((s) => s.disconnectWebSocket);
 
-  const isWs = isWsUrl(tab.request.url);
+  const isWs = tab.request.method === "WS";
   const wsConnected = tab.wsStatus === "connected";
   const wsConnecting = tab.wsStatus === "connecting";
-  // method set to us if iswsurl true
-  const method = isWs ? "WS" : tab.request.method;
+  const method = tab.request.method;
+
+  /** When user picks a method from the dropdown, handle WS ↔ HTTP transitions. */
+  const handleMethodChange = (newMethod: HttpMethod) => {
+    const patches: Partial<typeof tab.request> = { method: newMethod };
+    if (newMethod === "WS" && !tab.request.url.trim().toLowerCase().startsWith("ws://") && !tab.request.url.trim().toLowerCase().startsWith("wss://")) {
+      // Auto-prefix URL for convenience
+      const existingUrl = tab.request.url.trim();
+      if (existingUrl.startsWith("http://")) {
+        patches.url = existingUrl.replace(/^http:\/\//, "ws://");
+      } else if (existingUrl.startsWith("https://")) {
+        patches.url = existingUrl.replace(/^https:\/\//, "wss://");
+      } else if (!existingUrl) {
+        patches.url = "ws://";
+      }
+    } else if (newMethod !== "WS" && (tab.request.url.trim().toLowerCase().startsWith("ws://") || tab.request.url.trim().toLowerCase().startsWith("wss://"))) {
+      // Switching away from WS — convert URL back to HTTP
+      const existingUrl = tab.request.url.trim();
+      if (existingUrl.startsWith("wss://")) {
+        patches.url = existingUrl.replace(/^wss:\/\//, "https://");
+      } else if (existingUrl.startsWith("ws://")) {
+        patches.url = existingUrl.replace(/^ws:\/\//, "http://");
+      }
+    }
+    updateActiveRequest(patches);
+  };
 
   // console.log(tab.request);
   // -- WS action button ---------------------------------------------------
@@ -292,7 +311,7 @@ export default function RequestBar({ tab, isMobile }: RequestBarProps) {
               <select
                 value={method}
                 onChange={(e) =>
-                  updateActiveRequest({ method: e.target.value as HttpMethod })
+                  handleMethodChange(e.target.value as HttpMethod)
                 }
                 className={`input-shell appearance-none pr-7 font-semibold ${MethodStyles[method as HttpMethod]}`}
               >
@@ -347,7 +366,7 @@ export default function RequestBar({ tab, isMobile }: RequestBarProps) {
           <select
             value={tab.request.method}
             onChange={(e) =>
-              updateActiveRequest({ method: e.target.value as HttpMethod })
+              handleMethodChange(e.target.value as HttpMethod)
             }
             className={`input-shell appearance-none pr-7 font-semibold ${MethodStyles[tab.request.method as HttpMethod]}`}
           >

@@ -377,7 +377,7 @@ pub fn create_ws_request(
         collection_id: collection_id.to_string(),
         folder_id: folder_id.map(str::to_string),
         name: name.to_string(),
-        method: HttpMethod::Get,
+        method: HttpMethod::Ws,
         url: "ws://".to_string(),
         params: vec![],
         headers: vec![],

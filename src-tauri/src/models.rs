@@ -24,6 +24,8 @@ pub enum HttpMethod {
     Options,
     #[serde(rename = "HEAD")]
     Head,
+    #[serde(rename = "WS")]
+    Ws,
 }
 
 impl HttpMethod {
@@ -36,6 +38,7 @@ impl HttpMethod {
             HttpMethod::Delete => reqwest::Method::DELETE,
             HttpMethod::Options => reqwest::Method::OPTIONS,
             HttpMethod::Head => reqwest::Method::HEAD,
+            HttpMethod::Ws => panic!("WS requests should not go through the HTTP pipeline"),
         }
     }
 
@@ -48,6 +51,7 @@ impl HttpMethod {
             HttpMethod::Delete => "DELETE",
             HttpMethod::Options => "OPTIONS",
             HttpMethod::Head => "HEAD",
+            HttpMethod::Ws => "WS",
         }
     }
 }

@@ -142,11 +142,14 @@ export interface RequestTab {
   response?: ApiResponse;
   isSending: boolean;
   error?: string;
-  // WebSocket state (only used when the URL starts with ws:// or wss://)
+  // WebSocket state (only used when method is "WS")
   wsConnectionId?: string;
   wsMessages: WsMessage[];
   wsStatus: WsStatus;
   wsSavedMessages: WsSavedMessage[];
+  wsProtocol: "raw" | "graphql-ws";
+  /** Tracks active graphql-ws subscription IDs for cleanup */
+  wsGqlSubscriptionIds: string[];
 }
 
 export interface Workspace {

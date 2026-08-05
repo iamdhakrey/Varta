@@ -39,6 +39,7 @@ interface VartaState {
   loadSavedMessages: (requestId: string) => Promise<void>;
   addSavedMessage: (requestId: string, name: string, data: string) => Promise<void>;
   deleteSavedMessage: (requestId: string, messageId: string) => Promise<void>;
+  setWsProtocol: (protocol: "raw" | "graphql-ws") => void;
   initWsListener: () => Promise<UnlistenFn>;
 }
 
@@ -91,6 +92,8 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       wsMessages: [],
       wsStatus: "disconnected",
       wsSavedMessages: [],
+      wsProtocol: "raw",
+      wsGqlSubscriptionIds: [],
     };
     set((s) => ({ tabs: [...s.tabs, tab], activeTabId: tab.id }));
   },
@@ -105,6 +108,8 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       wsMessages: [],
       wsStatus: "disconnected",
       wsSavedMessages: [],
+      wsProtocol: "raw",
+      wsGqlSubscriptionIds: [],
     };
     set((s) => ({ tabs: [...s.tabs, tab], activeTabId: tab.id }));
   },
@@ -228,15 +233,25 @@ export const useVartaStore = create<VartaState>((set, get) => ({
     // Set connecting state
     set((s) => ({
       tabs: s.tabs.map((t) =>
-        t.id === activeTabId ? { ...t, wsStatus: "connecting" as const, wsMessages: [] } : t,
+        t.id === activeTabId ? { ...t, wsStatus: "connecting" as const, wsMessages: [], wsGqlSubscriptionIds: [] } : t,
       ),
     }));
 
     try {
       // Build headers from the request
-      const headers = tab.request.headers
+      const headers: [string, string][] = tab.request.headers
         .filter((h) => h.enabled && h.key)
         .map((h) => [h.key, h.value] as [string, string]);
+
+      // Auto-inject graphql-transport-ws sub-protocol header
+      if (tab.wsProtocol === "graphql-ws") {
+        const hasProto = headers.some(
+          ([k]) => k.toLowerCase() === "sec-websocket-protocol",
+        );
+        if (!hasProto) {
+          headers.push(["Sec-WebSocket-Protocol", "graphql-transport-ws"]);
+        }
+      }
 
       const connectionId = await invoke<string>("ws_connect", {
         url: tab.request.url,
@@ -250,6 +265,14 @@ export const useVartaStore = create<VartaState>((set, get) => ({
             : t,
         ),
       }));
+
+      // Send connection_init for graphql-ws protocol
+      if (tab.wsProtocol === "graphql-ws") {
+        await invoke("ws_send", {
+          connectionId,
+          message: JSON.stringify({ type: "connection_init" }),
+        });
+      }
     } catch (err) {
       console.error("WS connect failed:", err);
       set((s) => ({
@@ -289,13 +312,50 @@ export const useVartaStore = create<VartaState>((set, get) => ({
     if (!tab?.wsConnectionId) return;
 
     try {
+      let payload = message;
+
+      // Wrap in graphql-ws framing if using the protocol
+      if (tab.wsProtocol === "graphql-ws") {
+        const subId = crypto.randomUUID();
+        // Track subscription ID for cleanup
+        set((s) => ({
+          tabs: s.tabs.map((t) =>
+            t.id === activeTabId
+              ? { ...t, wsGqlSubscriptionIds: [...t.wsGqlSubscriptionIds, subId] }
+              : t,
+          ),
+        }));
+
+        try {
+          const parsed = JSON.parse(message);
+          payload = JSON.stringify({
+            id: subId,
+            type: "subscribe",
+            payload: parsed,
+          });
+        } catch {
+          // If message isn't valid JSON, send it as-is
+          payload = message;
+        }
+      }
+
       await invoke("ws_send", {
         connectionId: tab.wsConnectionId,
-        message,
+        message: payload,
       });
     } catch (err) {
       console.error("WS send failed:", err);
     }
+  },
+
+  setWsProtocol: (protocol: "raw" | "graphql-ws") => {
+    const { activeTabId } = get();
+    if (!activeTabId) return;
+    set((s) => ({
+      tabs: s.tabs.map((t) =>
+        t.id === activeTabId ? { ...t, wsProtocol: protocol } : t,
+      ),
+    }));
   },
 
   addWsMessage: (msg: WsMessage) => {
