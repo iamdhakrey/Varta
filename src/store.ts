@@ -1,5 +1,15 @@
 import { create } from "zustand";
-import { ApiRequest, AppSettings, CollectionTree, EnvironmentVariable, EnvironmentWithVariables, HttpMethod, RequestTab, WsMessage, WsSavedMessage } from "./types";
+import {
+  ApiRequest,
+  AppSettings,
+  CollectionTree,
+  EnvironmentVariable,
+  EnvironmentWithVariables,
+  HttpMethod,
+  RequestTab,
+  WsMessage,
+  WsSavedMessage,
+} from "./types";
 import { invoke } from "@tauri-apps/api/core";
 import { WorkspaceStore, Workspace } from "./types";
 import { sendNativeRequest } from "./services/rest";
@@ -8,12 +18,12 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 interface VartaState {
   tabs: RequestTab[];
   activeTabId: string | null;
+  activeTab: RequestTab | null;
   isCommandPaletteOpen: boolean;
   isHistoryOpen: boolean;
   activeEnvId: string;
   isEnvEditorOpen: boolean;
   isSidebarOpen: boolean;
-
 
   openRequest: (request: ApiRequest) => void;
   newTab: () => void;
@@ -37,7 +47,11 @@ interface VartaState {
   sendWsMessage: (message: string) => Promise<void>;
   addWsMessage: (msg: WsMessage) => void;
   loadSavedMessages: (requestId: string) => Promise<void>;
-  addSavedMessage: (requestId: string, name: string, data: string) => Promise<void>;
+  addSavedMessage: (
+    requestId: string,
+    name: string,
+    data: string,
+  ) => Promise<void>;
   deleteSavedMessage: (requestId: string, messageId: string) => Promise<void>;
   setWsProtocol: (protocol: "raw" | "graphql-ws") => void;
   initWsListener: () => Promise<UnlistenFn>;
@@ -68,10 +82,12 @@ export const useVartaStore = create<VartaState>((set, get) => ({
   activeEnvId: "env-staging",
   isEnvEditorOpen: false,
   isSidebarOpen: false,
-
+  activeTab: null,
 
   toggleSidebar: (open) =>
-    set((s) => ({ isSidebarOpen: open !== undefined ? open : !s.isSidebarOpen })),
+    set((s) => ({
+      isSidebarOpen: open !== undefined ? open : !s.isSidebarOpen,
+    })),
   setSidebarOpen: (open) => set({ isSidebarOpen: open }),
 
   openEnvEditor: () => set({ isEnvEditorOpen: true }),
@@ -81,7 +97,7 @@ export const useVartaStore = create<VartaState>((set, get) => ({
   openRequest: (request) => {
     const existing = get().tabs.find((t) => t.request.id === request.id);
     if (existing) {
-      set({ activeTabId: existing.id });
+      set({ activeTabId: existing.id, activeTab: existing });
       return;
     }
     const tab: RequestTab = {
@@ -177,11 +193,11 @@ export const useVartaStore = create<VartaState>((set, get) => ({
           tabs: s.tabs.map((t) =>
             t.id === activeTabId
               ? {
-                ...t,
-                isSending: false,
-                response: undefined,
-                error: errorMessage,
-              }
+                  ...t,
+                  isSending: false,
+                  response: undefined,
+                  error: errorMessage,
+                }
               : t,
           ),
         }));
@@ -198,10 +214,9 @@ export const useVartaStore = create<VartaState>((set, get) => ({
 
   setEnv: (id) => set({ activeEnvId: id }),
 
-
   saveActiveRequest: async () => {
     const state = get();
-    const activeTab = state.tabs.find(t => t.id === state.activeTabId);
+    const activeTab = state.tabs.find((t) => t.id === state.activeTabId);
 
     if (!activeTab || !activeTab.isDirty) return;
 
@@ -211,9 +226,9 @@ export const useVartaStore = create<VartaState>((set, get) => ({
 
       // Clear dirty flag on success
       set((state) => ({
-        tabs: state.tabs.map(t =>
-          t.id === state.activeTabId ? { ...t, isDirty: false } : t
-        )
+        tabs: state.tabs.map((t) =>
+          t.id === state.activeTabId ? { ...t, isDirty: false } : t,
+        ),
       }));
       useWorkspaceStore.getState().fetchCollections();
     } catch (error) {
@@ -233,7 +248,14 @@ export const useVartaStore = create<VartaState>((set, get) => ({
     // Set connecting state
     set((s) => ({
       tabs: s.tabs.map((t) =>
-        t.id === activeTabId ? { ...t, wsStatus: "connecting" as const, wsMessages: [], wsGqlSubscriptionIds: [] } : t,
+        t.id === activeTabId
+          ? {
+              ...t,
+              wsStatus: "connecting" as const,
+              wsMessages: [],
+              wsGqlSubscriptionIds: [],
+            }
+          : t,
       ),
     }));
 
@@ -261,7 +283,11 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       set((s) => ({
         tabs: s.tabs.map((t) =>
           t.id === activeTabId
-            ? { ...t, wsConnectionId: connectionId, wsStatus: "connected" as const }
+            ? {
+                ...t,
+                wsConnectionId: connectionId,
+                wsStatus: "connected" as const,
+              }
             : t,
         ),
       }));
@@ -299,7 +325,11 @@ export const useVartaStore = create<VartaState>((set, get) => ({
     set((s) => ({
       tabs: s.tabs.map((t) =>
         t.id === activeTabId
-          ? { ...t, wsConnectionId: undefined, wsStatus: "disconnected" as const }
+          ? {
+              ...t,
+              wsConnectionId: undefined,
+              wsStatus: "disconnected" as const,
+            }
           : t,
       ),
     }));
@@ -321,7 +351,10 @@ export const useVartaStore = create<VartaState>((set, get) => ({
         set((s) => ({
           tabs: s.tabs.map((t) =>
             t.id === activeTabId
-              ? { ...t, wsGqlSubscriptionIds: [...t.wsGqlSubscriptionIds, subId] }
+              ? {
+                  ...t,
+                  wsGqlSubscriptionIds: [...t.wsGqlSubscriptionIds, subId],
+                }
               : t,
           ),
         }));
@@ -380,7 +413,10 @@ export const useVartaStore = create<VartaState>((set, get) => ({
 
   loadSavedMessages: async (requestId: string) => {
     try {
-      const messages = await invoke<WsSavedMessage[]>("ws_list_saved_messages", { requestId });
+      const messages = await invoke<WsSavedMessage[]>(
+        "ws_list_saved_messages",
+        { requestId },
+      );
       set((s) => ({
         tabs: s.tabs.map((t) =>
           t.request.id === requestId ? { ...t, wsSavedMessages: messages } : t,
@@ -393,7 +429,11 @@ export const useVartaStore = create<VartaState>((set, get) => ({
 
   addSavedMessage: async (requestId: string, name: string, data: string) => {
     try {
-      const msg = await invoke<WsSavedMessage>("ws_add_saved_message", { requestId, name, data });
+      const msg = await invoke<WsSavedMessage>("ws_add_saved_message", {
+        requestId,
+        name,
+        data,
+      });
       set((s) => ({
         tabs: s.tabs.map((t) =>
           t.request.id === requestId
@@ -412,7 +452,12 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       set((s) => ({
         tabs: s.tabs.map((t) =>
           t.request.id === requestId
-            ? { ...t, wsSavedMessages: t.wsSavedMessages.filter((m) => m.id !== messageId) }
+            ? {
+                ...t,
+                wsSavedMessages: t.wsSavedMessages.filter(
+                  (m) => m.id !== messageId,
+                ),
+              }
             : t,
         ),
       }));
@@ -426,28 +471,30 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       get().addWsMessage(event.payload);
     });
     // Also listen for status changes (disconnect from server side)
-    const unlistenStatus = await listen<{ connectionId: string; status: string }>(
-      "ws://status",
-      (event) => {
-        if (event.payload.status === "disconnected") {
-          set((s) => ({
-            tabs: s.tabs.map((t) =>
-              t.wsConnectionId === event.payload.connectionId
-                ? { ...t, wsConnectionId: undefined, wsStatus: "disconnected" as const }
-                : t,
-            ),
-          }));
-        }
-      },
-    );
+    const unlistenStatus = await listen<{
+      connectionId: string;
+      status: string;
+    }>("ws://status", (event) => {
+      if (event.payload.status === "disconnected") {
+        set((s) => ({
+          tabs: s.tabs.map((t) =>
+            t.wsConnectionId === event.payload.connectionId
+              ? {
+                  ...t,
+                  wsConnectionId: undefined,
+                  wsStatus: "disconnected" as const,
+                }
+              : t,
+          ),
+        }));
+      }
+    });
     return () => {
       unlisten();
       unlistenStatus();
     };
   },
 }));
-
-
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   workspaces: [],
@@ -458,8 +505,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   error: null,
   activeEnvironmentId: null,
   environments: [],
-
-
 
   fetchWorkspaces: async () => {
     set({ isLoading: true, error: null });
@@ -475,7 +520,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (!name.trim()) return;
     set({ isLoading: true, error: null });
     try {
-      const newWorkspace = await invoke<Workspace>("create_workspace", { name });
+      const newWorkspace = await invoke<Workspace>("create_workspace", {
+        name,
+      });
       set((state) => ({
         workspaces: [...state.workspaces, newWorkspace],
         activeWorkspaceId: state.activeWorkspaceId ?? newWorkspace.id,
@@ -498,7 +545,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       await invoke("rename_workspace", { id, name });
       set((state) => ({
         workspaces: state.workspaces.map((w) =>
-          w.id === id ? { ...w, name, updated_at: new Date().toISOString() } : w
+          w.id === id
+            ? { ...w, name, updated_at: new Date().toISOString() }
+            : w,
         ),
         isLoading: false,
       }));
@@ -546,7 +595,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   getActiveState: async () => {
     try {
       // Use get_active_state_full to restore both workspace and environment
-      const fullState = await invoke<{ activeWorkspaceId?: string; activeEnvironmentId?: string }>("get_active_state_full");
+      const fullState = await invoke<{
+        activeWorkspaceId?: string;
+        activeEnvironmentId?: string;
+      }>("get_active_state_full");
       if (fullState.activeWorkspaceId) {
         set({ activeWorkspaceId: fullState.activeWorkspaceId });
       }
@@ -566,9 +618,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     set({ isLoadingCollections: true });
 
     try {
-      const collections = await invoke<CollectionTree[]>("get_collection_trees", {
-        workspaceid: activeWorkspaceId,
-      });
+      const collections = await invoke<CollectionTree[]>(
+        "get_collection_trees",
+        {
+          workspaceid: activeWorkspaceId,
+        },
+      );
       console.log("Fetched collections:", collections);
       if (!collections) {
         set({ error: "No collections found", isLoadingCollections: false });
@@ -607,7 +662,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       await invoke("delete_collection", { collectionid: collectionId });
       set((state) => ({
         collectionTrees: state.collectionTrees.filter(
-          (c) => c.collection.id !== collectionId
+          (c) => c.collection.id !== collectionId,
         ),
         isLoadingCollections: false,
       }));
@@ -626,7 +681,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         collectionTrees: state.collectionTrees.map((c) =>
           c.collection.id === collectionId
             ? { ...c, collection: { ...c.collection, name } }
-            : c
+            : c,
         ),
         isLoadingCollections: false,
       }));
@@ -640,7 +695,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (!newName.trim()) return;
     set({ isLoadingCollections: true });
     try {
-      await invoke("clone_collection", { collectionid: collectionId, newname: newName });
+      await invoke("clone_collection", {
+        collectionid: collectionId,
+        newname: newName,
+      });
       await get().fetchCollections(); // Refresh the collection list after cloning
       set({ isLoadingCollections: false });
     } catch (err) {
@@ -649,13 +707,20 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-
   // Folders
-  createFolder: async (collectionId: string, parentFolderId: string | null, name: string) => {
+  createFolder: async (
+    collectionId: string,
+    parentFolderId: string | null,
+    name: string,
+  ) => {
     if (!name.trim()) return;
     set({ isLoadingCollections: true });
     try {
-      await invoke("create_folder", { collectionid: collectionId, parentfolderid: parentFolderId, name });
+      await invoke("create_folder", {
+        collectionid: collectionId,
+        parentfolderid: parentFolderId,
+        name,
+      });
       await get().fetchCollections(); // Refresh the collection list after folder creation
       set({ isLoadingCollections: false });
     } catch (err) {
@@ -676,11 +741,19 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-  renameFolder: async (collectionId: string, folderId: string, name: string) => {
+  renameFolder: async (
+    collectionId: string,
+    folderId: string,
+    name: string,
+  ) => {
     if (!name.trim()) return;
     set({ isLoadingCollections: true });
     try {
-      await invoke("rename_folder", { collectionid: collectionId, folderid: folderId, name });
+      await invoke("rename_folder", {
+        collectionid: collectionId,
+        folderid: folderId,
+        name,
+      });
       await get().fetchCollections(); // Refresh the collection list after folder renaming
       set({ isLoadingCollections: false });
     } catch (err) {
@@ -689,11 +762,26 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-  createRequest: async (collectionId: string, folderId: string | null, name: string) => {
+  createRequest: async (
+    collectionId: string,
+    folderId: string | null,
+    name: string,
+  ) => {
     set({ isLoadingCollections: true });
     try {
-      console.log("Creating request:", name, "in collection:", collectionId, "folder:", folderId);
-      await invoke("create_request", { collectionid: collectionId, folderid: folderId, name: name });
+      console.log(
+        "Creating request:",
+        name,
+        "in collection:",
+        collectionId,
+        "folder:",
+        folderId,
+      );
+      await invoke("create_request", {
+        collectionid: collectionId,
+        folderid: folderId,
+        name: name,
+      });
       await get().fetchCollections(); // Refresh the collection list after request creation
       set({ isLoadingCollections: false });
     } catch (err) {
@@ -702,11 +790,26 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-  createWs: async (collectionId: string, folderId: string | null, name: string) => {
+  createWs: async (
+    collectionId: string,
+    folderId: string | null,
+    name: string,
+  ) => {
     set({ isLoadingCollections: true });
     try {
-      console.log("Creating WS request:", name, "in collection:", collectionId, "folder:", folderId);
-      await invoke("create_ws_request", { collectionid: collectionId, folderid: folderId, name: name });
+      console.log(
+        "Creating WS request:",
+        name,
+        "in collection:",
+        collectionId,
+        "folder:",
+        folderId,
+      );
+      await invoke("create_ws_request", {
+        collectionid: collectionId,
+        folderid: folderId,
+        name: name,
+      });
       await get().fetchCollections(); // Refresh the collection list after request creation
       set({ isLoadingCollections: false });
     } catch (err) {
@@ -727,11 +830,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-
   fetchEnvironments: async (workspaceid: string) => {
     set({ isLoading: true });
     try {
-      const envs = await invoke<EnvironmentWithVariables[]>("list_environments", { workspaceid });
+      const envs = await invoke<EnvironmentWithVariables[]>(
+        "list_environments",
+        { workspaceid },
+      );
       set({ environments: envs, isLoading: false });
       console.log("Fetched environments:", envs);
     } catch (error) {
@@ -756,7 +861,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         environments: state.environments.map((env) =>
           env.environment.id === environmentid
             ? { ...env, environment: { ...env.environment, name } }
-            : env
+            : env,
         ),
       }));
     } catch (error) {
@@ -768,21 +873,37 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     try {
       await invoke("delete_environment", { environmentid });
       set((state) => ({
-        environments: state.environments.filter((env) => env.environment.id !== environmentid),
-        activeEnvironmentId: state.activeEnvironmentId === environmentid ? null : state.activeEnvironmentId,
+        environments: state.environments.filter(
+          (env) => env.environment.id !== environmentid,
+        ),
+        activeEnvironmentId:
+          state.activeEnvironmentId === environmentid
+            ? null
+            : state.activeEnvironmentId,
       }));
     } catch (error) {
       console.error("Failed to delete environment:", error);
     }
   },
 
-  saveVariables: async (environmentid: string, variables: EnvironmentVariable[]) => {
+  saveVariables: async (
+    environmentid: string,
+    variables: EnvironmentVariable[],
+  ) => {
     try {
-      console.log("Saving variables for environment:", environmentid, "variables:", variables);
-      await invoke("replace_variables", { environmentid: environmentid, variables });
+      console.log(
+        "Saving variables for environment:",
+        environmentid,
+        "variables:",
+        variables,
+      );
+      await invoke("replace_variables", {
+        environmentid: environmentid,
+        variables,
+      });
       set((state) => ({
         environments: state.environments.map((env) =>
-          env.environment.id === environmentid ? { ...env, variables } : env
+          env.environment.id === environmentid ? { ...env, variables } : env,
         ),
       }));
     } catch (error) {
@@ -798,9 +919,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       console.error("Failed to persist active environment:", error);
     }
   },
-
 }));
-
 
 export const MethodStyles: Record<HttpMethod, string> = {
   GET: "text-method-get",
@@ -812,8 +931,6 @@ export const MethodStyles: Record<HttpMethod, string> = {
   HEAD: "text-text-muted",
   WS: "text-method-ws",
 };
-
-
 
 interface SettingsStore {
   settings: AppSettings | null;
@@ -856,5 +973,5 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch (error) {
       console.error("Failed to save settings:", error);
     }
-  }
+  },
 }));

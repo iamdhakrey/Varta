@@ -13,6 +13,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { EnvironmentModal } from "./components/EnvironmentModal";
 import { Menu } from "lucide-react";
 import { UpdaterOverlay } from "./components/UpdaterOverlay";
+import Titlebar from "./components/TitleBar";
 
 export default function App() {
   useKeyboardShortcuts();
@@ -39,94 +40,95 @@ export default function App() {
   }, [initWsListener]);
 
   return (
-    <div className="relative flex h-screen w-screen overflow-hidden bg-bg text-text-primary">
-      {/* ── Desktop sidebar (always visible) ── */}
-      {!isMobile && <Sidebar isMobile={false} />}
+    <>
+      {/*<Titlebar />*/}
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg text-text-primary">
+        <Titlebar />
 
-      {/* ── Mobile sidebar (slide-over drawer) ── */}
-      {isMobile && isSidebarOpen && (
-        <div
-          className="fixed inset-0 z-50 flex animate-backdrop-in"
-          onClick={() => toggleSidebar(false)}
-        >
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/60" />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+          {/* ── Desktop sidebar (always visible) ── */}
+          {!isMobile && <Sidebar isMobile={false} />}
 
-          {/* Sidebar drawer */}
-          <div
-            className="relative z-10 animate-sidebar-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Sidebar
-              isMobile={true}
-              onClose={() => toggleSidebar(false)}
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* ── Mobile top header bar ── */}
-        {isMobile && (
-          <div className="flex items-center gap-3 border-b border-border bg-panel px-3 py-2.5">
-            <button
-              onClick={() => toggleSidebar(true)}
-              className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary"
-              aria-label="Open sidebar"
+          {/* ── Mobile sidebar (slide-over drawer) ── */}
+          {isMobile && isSidebarOpen && (
+            <div
+              className="fixed inset-0 z-50 flex animate-backdrop-in"
+              onClick={() => toggleSidebar(false)}
             >
-              <Menu size={20} />
-            </button>
-            <span className="text-sm font-semibold bg-brand-gradient bg-clip-text text-transparent">
-              Varta
-            </span>
-          </div>
-        )}
+              {/* Backdrop */}
+              <div className="absolute inset-0 bg-black/60" />
 
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <RequestEditor isMobile={isMobile} />
-        </div>
-
-        {activeTab && (
-          <>
-            {/* Drag-resize handle — desktop only */}
-            {!isMobile && (
+              {/* Sidebar drawer */}
               <div
-                onMouseDown={onMouseDown}
-                className="h-1 shrink-0 cursor-row-resize bg-border hover:bg-primary/60"
-              />
+                className="relative z-10 animate-sidebar-in"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Sidebar isMobile={true} onClose={() => toggleSidebar(false)} />
+              </div>
+            </div>
+          )}
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            {/* ── Mobile top header bar ── */}
+            {isMobile && (
+              <div className="flex items-center gap-3 border-b border-border bg-panel px-3 py-2.5">
+                <button
+                  onClick={() => toggleSidebar(true)}
+                  className="rounded-md p-1.5 text-text-secondary hover:bg-panel-raised hover:text-text-primary"
+                  aria-label="Open sidebar"
+                >
+                  <Menu size={20} />
+                </button>
+                <span className="text-sm font-semibold bg-brand-gradient bg-clip-text text-transparent">
+                  Varta
+                </span>
+              </div>
             )}
 
-            {/* Response / WebSocket panel */}
-            <div
-              style={isMobile ? { height: "45vh" } : { height }}
-              className="shrink-0 border-t border-border bg-bg"
-            >
-              {isWsTab ? (
-                <WebSocketPanel
-                  tab={activeTab}
-                  isMobile={isMobile}
-                />
-              ) : (
-                <ResponsePanel
-                  response={activeTab.response}
-                  isSending={activeTab.isSending}
-                  error={activeTab.error}
-                  isMobile={isMobile}
-                />
-              )}
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <RequestEditor isMobile={isMobile} />
             </div>
-          </>
-        )}
+
+            {activeTab && (
+              <>
+                {/* Drag-resize handle — desktop only */}
+                {!isMobile && (
+                  <div
+                    onMouseDown={onMouseDown}
+                    className="h-1 shrink-0 cursor-row-resize bg-border hover:bg-primary/60"
+                  />
+                )}
+
+                {/* Response / WebSocket panel */}
+                <div
+                  style={isMobile ? { height: "45vh" } : { height }}
+                  className="shrink-0 border-t border-border bg-bg"
+                >
+                  {isWsTab ? (
+                    <WebSocketPanel tab={activeTab} isMobile={isMobile} />
+                  ) : (
+                    <ResponsePanel
+                      response={activeTab.response}
+                      isSending={activeTab.isSending}
+                      error={activeTab.error}
+                      isMobile={isMobile}
+                    />
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Global Overlays & Modals */}
+          <UpdaterOverlay />
+          <HistoryDrawer isMobile={isMobile} />
+          <CommandPalette isMobile={isMobile} />
+          <SettingsPanel isMobile={isMobile} />
+
+          {/* Mount the Environment Modal here */}
+          <EnvironmentModal isMobile={isMobile} />
+        </div>
       </div>
-
-      {/* Global Overlays & Modals */}
-      <UpdaterOverlay />
-      <HistoryDrawer isMobile={isMobile} />
-      <CommandPalette isMobile={isMobile} />
-      <SettingsPanel isMobile={isMobile} />
-
-      {/* Mount the Environment Modal here */}
-      <EnvironmentModal isMobile={isMobile} />
-    </div>
+    </>
   );
 }
