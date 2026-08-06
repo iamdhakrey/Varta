@@ -54,7 +54,6 @@ pub async fn send_request(
     builder = apply_body(builder, &interpolated).await?;
 
     let started = Instant::now();
-    println!("{:?}", builder);
     let send_result = builder.send().await;
     let elapsed = started.elapsed();
 
@@ -249,7 +248,6 @@ async fn apply_body(
     request: &ApiRequest,
 ) -> AppResult<reqwest::RequestBuilder> {
     let mode = request.body.mode.unwrap_or(BodyMode::Json);
-    println!("{:?}", request.body.raw);
     match mode {
         BodyMode::Json => {
             if let Some(raw) = &request.body.raw {
@@ -314,7 +312,6 @@ async fn apply_body(
             builder = builder.multipart(form);
         }
     }
-    println!("{:#?}", builder);
     Ok(builder)
 }
 
