@@ -16,6 +16,7 @@ const methodColors: Record<HttpMethod, string> = {
 
 export const RequestItem: React.FC<{ request: ApiRequest }> = ({ request }) => {
   const { deleteRequest, renameRequest } = useWorkspaceStore();
+  const activeTabId = useVartaStore((s) => s.activeTabId);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -69,17 +70,20 @@ export const RequestItem: React.FC<{ request: ApiRequest }> = ({ request }) => {
         <div
           // Trigger the open action when the row is clicked
           onClick={() => openRequestTab(request)}
-          className="group flex items-center justify-between px-2 py-1.5 mx-1 my-0.5 rounded-md text-sm cursor-pointer hover:bg-panel hover:text-text-primary text-text-secondary transition-colors"
+          className={`group flex items-center justify-between px-2 py-1.5 mx-1 my-0.5 rounded-md text-sm cursor-pointer hover:bg-panel hover:text-text-primary text-text-secondary transition-colors ${activeTabId === request.id
+            ? "border-2 border-primary /10"
+            : "border border-transparent"
+            }`}
         >
-          <div className="flex items-center gap-2.5 truncate">
+
+          <div className={`flex items-center gap-2.5 truncate transition-colors`}>
             <span className={`text-[10px] font-bold w-10 text-right ${methodColors[request.method as HttpMethod] || "text-text-muted"}`}>
               {request.method}
             </span>
             <span className="truncate">{request.name}</span>
-          </div>
-
+          </div >
           {/* Hover Actions */}
-          <div className="opacity-70 group-hover:opacity-100 flex items-center transition-opacity pr-1">
+          < div className="opacity-70 group-hover:opacity-100 flex items-center transition-opacity pr-1" >
             <button
               onClick={() => {
                 setEditingId(request.id);
@@ -100,9 +104,8 @@ export const RequestItem: React.FC<{ request: ApiRequest }> = ({ request }) => {
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
-          </div>
-
-        </div>
+          </div >
+        </div >
       )}
     </>
   );
