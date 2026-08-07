@@ -263,6 +263,7 @@ export interface WorkspaceStore {
   ) => Promise<void>;
   // updateRequest: (requestId: string, updatedRequest: Partial<ApiRequest>) => Promise<void>;
   deleteRequest: (requestId: string) => Promise<void>;
+  renameRequest: (id: string, name: string) => Promise<void>;
 
   fetchEnvironments: (workspaceid: string) => Promise<void>;
   createEnvironment: (workspaceid: string, name: string) => Promise<void>;

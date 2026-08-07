@@ -193,11 +193,11 @@ export const useVartaStore = create<VartaState>((set, get) => ({
           tabs: s.tabs.map((t) =>
             t.id === activeTabId
               ? {
-                  ...t,
-                  isSending: false,
-                  response: undefined,
-                  error: errorMessage,
-                }
+                ...t,
+                isSending: false,
+                response: undefined,
+                error: errorMessage,
+              }
               : t,
           ),
         }));
@@ -250,11 +250,11 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       tabs: s.tabs.map((t) =>
         t.id === activeTabId
           ? {
-              ...t,
-              wsStatus: "connecting" as const,
-              wsMessages: [],
-              wsGqlSubscriptionIds: [],
-            }
+            ...t,
+            wsStatus: "connecting" as const,
+            wsMessages: [],
+            wsGqlSubscriptionIds: [],
+          }
           : t,
       ),
     }));
@@ -284,10 +284,10 @@ export const useVartaStore = create<VartaState>((set, get) => ({
         tabs: s.tabs.map((t) =>
           t.id === activeTabId
             ? {
-                ...t,
-                wsConnectionId: connectionId,
-                wsStatus: "connected" as const,
-              }
+              ...t,
+              wsConnectionId: connectionId,
+              wsStatus: "connected" as const,
+            }
             : t,
         ),
       }));
@@ -326,10 +326,10 @@ export const useVartaStore = create<VartaState>((set, get) => ({
       tabs: s.tabs.map((t) =>
         t.id === activeTabId
           ? {
-              ...t,
-              wsConnectionId: undefined,
-              wsStatus: "disconnected" as const,
-            }
+            ...t,
+            wsConnectionId: undefined,
+            wsStatus: "disconnected" as const,
+          }
           : t,
       ),
     }));
@@ -352,9 +352,9 @@ export const useVartaStore = create<VartaState>((set, get) => ({
           tabs: s.tabs.map((t) =>
             t.id === activeTabId
               ? {
-                  ...t,
-                  wsGqlSubscriptionIds: [...t.wsGqlSubscriptionIds, subId],
-                }
+                ...t,
+                wsGqlSubscriptionIds: [...t.wsGqlSubscriptionIds, subId],
+              }
               : t,
           ),
         }));
@@ -453,11 +453,11 @@ export const useVartaStore = create<VartaState>((set, get) => ({
         tabs: s.tabs.map((t) =>
           t.request.id === requestId
             ? {
-                ...t,
-                wsSavedMessages: t.wsSavedMessages.filter(
-                  (m) => m.id !== messageId,
-                ),
-              }
+              ...t,
+              wsSavedMessages: t.wsSavedMessages.filter(
+                (m) => m.id !== messageId,
+              ),
+            }
             : t,
         ),
       }));
@@ -480,10 +480,10 @@ export const useVartaStore = create<VartaState>((set, get) => ({
           tabs: s.tabs.map((t) =>
             t.wsConnectionId === event.payload.connectionId
               ? {
-                  ...t,
-                  wsConnectionId: undefined,
-                  wsStatus: "disconnected" as const,
-                }
+                ...t,
+                wsConnectionId: undefined,
+                wsStatus: "disconnected" as const,
+              }
               : t,
           ),
         }));
@@ -826,6 +826,18 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       set({ isLoadingCollections: false });
     } catch (err) {
       console.error("Error deleting request:", err);
+      set({ error: String(err), isLoadingCollections: false });
+    }
+  },
+
+  renameRequest: async (id: string, name: string) => {
+    set({ isLoadingCollections: true });
+    try {
+      await invoke("rename_request", { requestid: id, name });
+      await get().fetchCollections(); // Refresh the collection list after request rename
+      set({ isLoadingCollections: false });
+    } catch (err) {
+      console.error("Error renaming request:", err);
       set({ error: String(err), isLoadingCollections: false });
     }
   },
