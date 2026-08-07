@@ -2,22 +2,44 @@ import React, { useEffect, useRef, useState } from "react";
 import { useWorkspaceStore } from "../../store";
 // import { FolderNodeItem } from "./FolderNodeItem";
 // import { RequestItem } from "./RequestItem";
-import { Plus, Trash2, Library, Edit2, Check, X, FolderPlus, FilePlus } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Library,
+  Edit2,
+  Check,
+  X,
+  FolderPlus,
+  FilePlus,
+} from "lucide-react";
 import { FolderNodeItem } from "./FolderNodeItem";
 import { RequestItem } from "./RequestItem";
 
 export const CollectionsTree: React.FC = () => {
-  const { activeWorkspaceId, collectionTrees, fetchCollections, createRequest, createCollection, renameCollection, deleteCollection, createFolder, createWs } = useWorkspaceStore();
+  const {
+    activeWorkspaceId,
+    collectionTrees,
+    fetchCollections,
+    createRequest,
+    createCollection,
+    renameCollection,
+    deleteCollection,
+    createFolder,
+    createWs,
+  } = useWorkspaceStore();
 
   const [isAddingCollection, setIsAddingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [inputValue, setInputValue] = useState("");
+  // const [inputValue, setInputValue] = useState("");
   const [editValue, setEditValue] = useState("");
 
   // Dropdown & Child Item States
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [addingItem, setAddingItem] = useState<{ collectionId: string; type: "folder" | "request" | "ws" } | null>(null);
+  const [addingItem, setAddingItem] = useState<{
+    collectionId: string;
+    type: "folder" | "request" | "ws";
+  } | null>(null);
   const [newItemName, setNewItemName] = useState("");
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -37,14 +59,12 @@ export const CollectionsTree: React.FC = () => {
 
   const handleRenameCollection = async (e: React.FormEvent, id: string) => {
     e.preventDefault();
-    if (inputValue.trim()) {
-      await renameCollection(id, inputValue);
-      setInputValue("");
+    if (editValue.trim()) {
+      await renameCollection(id, editValue);
+      setEditValue("");
       setEditingId(null);
     }
   };
-
-
 
   // Click-outside listener for the dropdown menu
   useEffect(() => {
@@ -56,7 +76,6 @@ export const CollectionsTree: React.FC = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
 
   const handleCreateItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +113,10 @@ export const CollectionsTree: React.FC = () => {
 
       {/* Inline Create Collection Form */}
       {isAddingCollection && (
-        <form onSubmit={handleCreateCollection} className="px-3 mb-2 flex gap-1">
+        <form
+          onSubmit={handleCreateCollection}
+          className="px-3 mb-2 flex gap-1"
+        >
           <input
             autoFocus
             type="text"
@@ -110,14 +132,18 @@ export const CollectionsTree: React.FC = () => {
       {/* Tree Data */}
       <div className="flex flex-col gap-3 pb-4">
         {collectionTrees.length === 0 && !isAddingCollection ? (
-          <div className="px-3 text-xs text-text-muted italic">No collections found.</div>
+          <div className="px-3 text-xs text-text-muted italic">
+            No collections found.
+          </div>
         ) : (
           collectionTrees.map((tree) => (
             <div key={tree.collection.id}>
               {editingId === tree.collection.id ? (
                 // Inline Edit Form
                 <form
-                  onSubmit={(e) => handleRenameCollection(e, tree.collection.id)}
+                  onSubmit={(e) =>
+                    handleRenameCollection(e, tree.collection.id)
+                  }
                   className="flex items-center gap-1 w-full px-2"
                 >
                   <input
@@ -127,7 +153,10 @@ export const CollectionsTree: React.FC = () => {
                     onChange={(e) => setEditValue(e.target.value)}
                     className="input-shell w-full py-0.5 px-2 text-xs"
                   />
-                  <button type="submit" className="p-1 hover:text-success cursor-pointer">
+                  <button
+                    type="submit"
+                    className="p-1 hover:text-success cursor-pointer"
+                  >
                     <Check className="w-3.5 h-3.5" />
                   </button>
                   <button
@@ -148,7 +177,6 @@ export const CollectionsTree: React.FC = () => {
 
                   {/* Hover Actions */}
                   <div className="opacity-70 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
-
                     {/* Add Item Dropdown Trigger */}
                     <div className="relative">
                       <button
@@ -167,7 +195,10 @@ export const CollectionsTree: React.FC = () => {
                         >
                           <button
                             onClick={() => {
-                              setAddingItem({ collectionId: tree.collection.id, type: "request" });
+                              setAddingItem({
+                                collectionId: tree.collection.id,
+                                type: "request",
+                              });
                               setActiveMenuId(null);
                             }}
                             className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-text-secondary hover:bg-panel hover:text-text-primary transition-colors cursor-pointer"
@@ -177,7 +208,10 @@ export const CollectionsTree: React.FC = () => {
                           </button>
                           <button
                             onClick={() => {
-                              setAddingItem({ collectionId: tree.collection.id, type: "ws" });
+                              setAddingItem({
+                                collectionId: tree.collection.id,
+                                type: "ws",
+                              });
                               setActiveMenuId(null);
                             }}
                             className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-text-secondary hover:bg-panel hover:text-text-primary transition-colors cursor-pointer"
@@ -187,7 +221,10 @@ export const CollectionsTree: React.FC = () => {
                           </button>
                           <button
                             onClick={() => {
-                              setAddingItem({ collectionId: tree.collection.id, type: "folder" });
+                              setAddingItem({
+                                collectionId: tree.collection.id,
+                                type: "folder",
+                              });
                               setActiveMenuId(null);
                             }}
                             className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-text-secondary hover:bg-panel hover:text-text-primary transition-colors cursor-pointer"
@@ -223,7 +260,10 @@ export const CollectionsTree: React.FC = () => {
 
               {/* Inline Create Form for Child Items (Requests/Folders) */}
               {addingItem?.collectionId === tree.collection.id && (
-                <form onSubmit={handleCreateItem} className="pl-6 pr-2 py-1 flex gap-1 mt-1">
+                <form
+                  onSubmit={handleCreateItem}
+                  className="pl-6 pr-2 py-1 flex gap-1 mt-1"
+                >
                   <input
                     autoFocus
                     type="text"
@@ -241,7 +281,10 @@ export const CollectionsTree: React.FC = () => {
               {/* Folders in Root */}
               <div className="flex flex-col gap-0.5 mt-0.5">
                 {tree.folders.map((folderNode) => (
-                  <FolderNodeItem key={folderNode.folder.id} node={folderNode} />
+                  <FolderNodeItem
+                    key={folderNode.folder.id}
+                    node={folderNode}
+                  />
                 ))}
 
                 {/* Requests in Root */}
